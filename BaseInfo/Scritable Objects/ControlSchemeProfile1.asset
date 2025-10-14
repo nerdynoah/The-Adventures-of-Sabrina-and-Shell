@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e72e49f73a0f90d4697f38b459cd8494, type: 3}
+  m_Name: ControlSchemeProfile1
+  m_EditorClassIdentifier: 
+  moveUp: 114
+  moveDown: 102
+  moveLeft: 100
+  moveRight: 103
+  crouch: 273
+  sprint: 327
+  jump: 32
+  breaking: 304
+  breaking2: 122
+  primaryFire: 323
+  secondaryFire: 324
+  utilityKey: 118
+  reload: 97
+  interact: 116
+  Inventory: 104
+  moveKey: 98
+  slot1: 49
+  slot2: 50
+  slot3: 51
+  slot4: 52
+  slot5: 53
+  slot6: 54
+  slot7: 55
+  slot8: 56
+  slot9: 57
+  slot10: 48
+  slot11: 45
+  slot12: 43
+  PauseGame: 27
+  HelpMenu: 282
+  ResetGame: 283
+  EndGame: 285
+  OpenChat: 111
+  CommandChat: 47
