@@ -23,7 +23,7 @@ public class RayShooters : MonoBehaviour
 
             foreach (RaycastHit hit in hits)
             {
-                if (hit.collider.CompareTag("IgnoreRaycast") || hit.collider.CompareTag("IgnorePlayerRaycast") || hit.collider.CompareTag("Player"))
+                if (hit.collider.CompareTag("IgnoreRaycast") || hit.collider.CompareTag("IgnorePlayerRaycast") || hit.collider.CompareTag("player"))
                 {
                     //Debug.Log("Ran into IgnorableObject");
                     continue;

@@ -14,16 +14,22 @@ public class EntitySpawner : MonoBehaviour
     [Header("Leveling")]
     [SerializeField] private int MaxLevel;
     [SerializeField] private int MinLevel;
-    [Header("Spawn Conditions")]
+    [Header("Spawn Conditions Entities")]
     [SerializeField][Min(1)] private int MaxSpawn;
     [SerializeField] private int SpawnPerTime;
+    [Space(15)]
+    [SerializeField] private bool RefreshMaxSpawnAfterReachingMax;
+    [SerializeField] private float TimeToRefresh;
     [SerializeField] private float ChanceOfSpawn;
-    [SerializeField] private bool ApplyAttributesRandomly = true;
+    [Space(15)]
+    [SerializeField] private bool ApplyAttributesRandomly = false;
     [SerializeField] private PathMode[] OverRidePathMode;
 
-    private List<EntityTemplete> enemyTMP;
-    private List<AttributesTemplete> attributesTempletes;
-    private List<InventoryItem> inventoryItems;
+    private List<EntityTemplete> enemyTMP = new();
+    private List<AttributesTemplete> attributesTempletes = new();
+    private List<InventoryItem> inventoryItems = new();
+    private float theTime = 0;
+    private int spawns = 0;
 
     void Start()
     {
@@ -42,14 +48,30 @@ public class EntitySpawner : MonoBehaviour
                 attributesTempletes.Add(AllLibary.ItemLibary.SearchLibaryForAttribute(Name[i]));
             }
         }
-        for (int i = 0; i < enemyTMP.Count; i++)
+    }
+    public void Update()
+    {
+        if (spawns < MaxSpawn && Time.time > theTime && UnityEngine.Random.value < ChanceOfSpawn)
         {
-            enemyTMP[i].Player.AddItem(inventoryItems.ToArray());
-            if (!ApplyAttributesRandomly)
+            for (int i = 0; i < enemyTMP.Count; i++)
             {
-                enemyTMP[i].Player.ApplyAttribute(attributesTempletes);
-                
+                GameObject entity = Instantiate(enemyTMP[i].gameObject, transform.position,transform.rotation);
+                EntityTemplete temp = entity.GetComponent<EntityTemplete>();
+                temp.player.ApplyAttribute(attributesTempletes[i]);
             }
+            spawns++;
+            if (spawns >= MaxSpawn)
+            {
+                theTime = Time.time + TimeToRefresh;
+            }
+            else
+            {
+                theTime = Time.time + SpawnPerTime;
+            }
+        }
+        else if (spawns >= MaxSpawn && Time.time > theTime && RefreshMaxSpawnAfterReachingMax)
+        {
+            spawns = 0;
         }
     }
 }

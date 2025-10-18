@@ -5,8 +5,6 @@ using BaseCharacter.Structual;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data;
-using TMPro;
 using UnityEngine;
 using static Enums;
 
@@ -17,7 +15,7 @@ public class Walking : MonoBehaviour
     [SerializeField] private Vision vision;
     [SerializeField] private Rigidbody body;
     [SerializeField] private HurtBox hurtBox;
-    [Header("Player Structure data")]
+    [Header("player Structure data")]
     [SerializeField] private PlayerShadow shadow;
     [SerializeField] private GameObject[] DistanceFeet;
     [SerializeField] private CapsuleCollider playerBody;
@@ -50,7 +48,7 @@ public class Walking : MonoBehaviour
     private AirMovement airMent;
 
     private Player player;
-    private readonly float JUMPDELAY = 0.125f;
+    private readonly float JUMPDELAY = 0.128f;
     private readonly float GAMEDELAY = 0.1f;
     private float jumpDelay;
     private bool InMenu { get; set; } = false;
@@ -112,7 +110,7 @@ public class Walking : MonoBehaviour
             }
             else
             {
-                player = new Player("RPG", "Super cool", 10, 1f, 1000f,30f,1f, invoSlots, 10f);
+                player = new Player("RPG", "Super cool", 10, 1f, 5000f,30f,1f, invoSlots, 10f);
                 (WeaponClass, float)[] resist = new(WeaponClass,float)[Enum.GetValues(typeof(WeaponClass)).Length];
                 for (int i = 0; i < resist.Length; i++)
                 {
@@ -122,13 +120,13 @@ public class Walking : MonoBehaviour
                 player.SetupResistances(resist);
                 player.SetReachRange(3);
                 player.AddMoney(500);
-                player.SetupMovement(40f, 22.5f, 180f, 1f, 0.4f, 0.97f, 1f);
+                player.SetupMovement(40f, 24f, 180f, 1f, 0.4f, 0.97f, 1f);
             }
         }
         catch (Exception e)
         {
             Debug.LogAssertion($"An error occured whlie reading Save data: {e}");
-            player = new Player("RPG", "Super cool", 10, 1f, 1000f, 30f, 1f, invoSlots, 10f);
+            player = new Player("RPG", "Super cool", 10, 1f, 5000f, 30f, 1f, invoSlots, 10f);
             (WeaponClass, float)[] resist = new (WeaponClass, float)[Enum.GetValues(typeof(WeaponClass)).Length];
             for (int i = 0; i < resist.Length; i++)
             {
@@ -138,7 +136,7 @@ public class Walking : MonoBehaviour
             player.SetupResistances(resist);
             player.SetReachRange(3);
             player.AddMoney(500);
-            player.SetupMovement(40f, 22.5f, 180f, 1f, 0.4f, 0.92f, 1f);
+            player.SetupMovement(40f, 24f, 180f, 1f, 0.4f, 0.92f, 1f);
         }
         player.SetupHotbar(hotbar, 0);
         invManager.SetupInventorySize(player.GetInventorySize(), player.GetHotbarSize(), 0, 0.75f, 85f, 4, 0.135f, 50f,0.5f,80f);
@@ -166,7 +164,7 @@ public class Walking : MonoBehaviour
         invManager.InventoryToggle();
         invManager.RefreshFullInventory(player);
         invManager.InventoryToggle();
-        body.mass = player.GetWeight() / 1000f;
+        body.mass = player.Weight / 100f;
     }
     private void GetHurtBoxData()
     {
@@ -185,7 +183,7 @@ public class Walking : MonoBehaviour
                 }
                 if (apply[i].Request == CommandRequest.Knockback)
                 {
-                    body.AddForce(apply[i].Knockback.GetKnockback(player.GetWeight()));
+                    body.AddForce(apply[i].Knockback.GetKnockback(player.Weight));
                 }
             }
             hurtBox.ClearQueue();
@@ -231,6 +229,7 @@ public class Walking : MonoBehaviour
         if (timeGameDelay < Time.time)
         {
             player.CheckPassive();
+            body.mass = player.Weight / 100f;
             timeGameDelay = Time.time + GAMEDELAY;
             if (InInventory)
             {
@@ -265,6 +264,10 @@ public class Walking : MonoBehaviour
             if (controls.GetIsAMovementKeyPressed())
             {
                 body.velocity = GetCurrentRotationFromMovement();
+            }
+            else
+            {
+                body.velocity = new Vector3 (body.velocity.x,Mathf.Max(body.velocity.y,0),body.velocity.z);
             }
         }
         Crouching(isGrounded);
@@ -350,6 +353,7 @@ public class Walking : MonoBehaviour
             invManager.RefreshFullInventory(player);
             InMenu = false;
             chatManager.AddText(text, 2.2f);
+            body.mass = player.Weight / 100f;
         }
         if (Input.GetKeyDown(KeyCode.Period) && !InInventory && InMenu == false)
         {
@@ -412,16 +416,6 @@ public class Walking : MonoBehaviour
             if (Input.GetKeyDown(controls.slot10))
             {
                 player.SetHotbarSlot(9);
-                invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
-            }
-            if (Input.GetKeyDown(controls.slot11))
-            {
-                player.SetHotbarSlot(10);
-                invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
-            }
-            if (Input.GetKeyDown(controls.slot12))
-            {
-                player.SetHotbarSlot(11);
                 invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
             }
         }
@@ -569,13 +563,13 @@ public class Walking : MonoBehaviour
     public Vector3 GetOffsetToSelf(float size)
     {
         Ray placementRay = movement.GetCamera().ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        float spawnForwardOffset = Mathf.Max((Mathf.Abs(body.velocity.x) + Mathf.Abs(body.velocity.z) + Mathf.Abs(body.velocity.y)) / 16f, 0.2f + size);
+        float spawnForwardOffset = Mathf.Max((Mathf.Abs(body.velocity.x) + Mathf.Abs(body.velocity.z) + Mathf.Abs(body.velocity.y)) / 12f, 0.05f + size);
         float lookingArea = movement.LookingYDirection();
         if (lookingArea > 0 && lookingArea < 100f) //0-90 value
         {
             lookingArea /= 70f;
         }
-        spawnForwardOffset += Mathf.Lerp(0, 2.2f, lookingArea);
+        spawnForwardOffset += Mathf.Lerp(0.2f, 0.8f + playerBody.height, lookingArea); //Adjust the value in the middle
         return placementRay.origin + placementRay.direction * spawnForwardOffset;
     }
 
@@ -719,7 +713,6 @@ public class Walking : MonoBehaviour
     private void FixedUpdate()
     {
         CalculateBestFall(body.velocity.y);
-        
         bool dirPressed = false;
         if (Input.GetKey(controls.moveLeft))
         {

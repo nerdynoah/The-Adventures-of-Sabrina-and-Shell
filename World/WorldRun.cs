@@ -10,10 +10,16 @@ public class WorldRun : MonoBehaviour
     /// <summary>
     /// Gravity of the current world.
     /// </summary>
-    public float Gravity {
-        get{
+    public float Gravity 
+    {
+        get
+        {
             return GRAVITY * gravityAdj;
-        } 
+        }
+        set
+        {
+            Physics.gravity = new Vector3(0,gravityAdj * GRAVITY,0);
+        }
     }
     // Start is called before the first frame update
     void Start()

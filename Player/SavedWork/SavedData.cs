@@ -98,13 +98,16 @@ public static class SaveData
     }
     public static void CreateRegexSaveFile()
     {
-        List<int> targets = new();
-        targets.Add(1);
-        targets.Add(2);
+        List<int> targets = new()
+        {
+            1,
+            2
+        };
         var regexSaveData = new RegexSaveData
         {
             RegexTarget = targets,
             DefaultItemAmount = 1,
+            LibaryDefaultObject = 7
         };
 
         string json = JsonUtility.ToJson(obj: regexSaveData, prettyPrint: true);
@@ -116,18 +119,17 @@ public static class SaveData
         {
             try
             {
-                List<string> NameOfAttribute = new List<string>();
+                List<string> NameOfAttributes = new List<string>();
                 List<int> AttributeEnum = new List<int>();
                 List<float> Strength = new List<float>();
                 List<float> Time = new List<float>();
                 List<float> Option = new List<float>();
                 List<string> OtherAttributesApplied = new();
-
                 
                 string json = File.ReadAllText(RegexPath);
                 RegexSaveData loadedData = JsonUtility.FromJson<RegexSaveData>(json);
-                NameOfAttribute.Add(name);
-                NameOfAttribute.AddRange(loadedData.NameOfAttribute);
+                NameOfAttributes.Add(name);
+                NameOfAttributes.AddRange(loadedData.NameOfAttribute);
                 OtherAttributesApplied.AddRange(loadedData.OtherAttributesApplied);
                 OtherAttributesApplied.Add(otherInterventions);
                 AttributeEnum.AddRange(loadedData.AttributeEnum);
@@ -144,7 +146,8 @@ public static class SaveData
                 {
                     RegexTarget = loadedData.RegexTarget,
                     DefaultItemAmount = loadedData.DefaultItemAmount,
-                    NameOfAttribute = NameOfAttribute,
+                    LibaryDefaultObject = loadedData.LibaryDefaultObject,
+                    NameOfAttribute = NameOfAttributes,
                     OtherAttributesApplied = OtherAttributesApplied,
                     Strength = Strength,
                     Time = Time,
@@ -218,7 +221,7 @@ public static class SaveData
             {
                 string json = File.ReadAllText(RegexPath);
                 RegexSaveData loadedData = JsonUtility.FromJson<RegexSaveData>(json);
-                string endResult = $"/Default #{loadedData.DefaultItemAmount}";
+                string endResult = $"/Default item #{loadedData.DefaultItemAmount}";
                 //TODO: FINISH TARGET FINDING
                 /*
                 foreach(Attributes target in loadedData.RegexTarget.Select(v => (Attributes)v))
@@ -346,6 +349,7 @@ public class PlayerSaveData
 [Serializable]
 public class RegexSaveData
 {
+    public int LibaryDefaultObject;
     #region Annotations
     public List<int> RegexTarget;
     public int DefaultItemAmount;
@@ -359,5 +363,4 @@ public class RegexSaveData
     public List<string> OtherAttributesApplied = new();
     public List<int> OtherAttributesIndex = new();
     #endregion
-
 }

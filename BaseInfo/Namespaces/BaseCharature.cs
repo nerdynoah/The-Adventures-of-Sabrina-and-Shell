@@ -11,7 +11,6 @@ using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.SceneManagement;
 using static Enums;
-using static UnityEngine.Rendering.DebugUI;
 
 namespace BaseCharacter
 {
@@ -225,7 +224,7 @@ namespace BaseCharacter
         /// <param name="match"></param>
         /// <param name="index">Which param string to look at in the <paramref name="match"/></param>
         /// <returns>Gets what type of object the libary should search for</returns>
-        public static LibraryObjects GetSlashLibarySearch(Match match, int index)
+        public static LibraryObjects GetSlashLibarySearch(Match match, int index, bool ReturnDefault = true)
         {
             CaptureCollection conditions = match.Groups["param"].Captures;
             string condition = conditions[index].Value.ToLower();
@@ -234,13 +233,16 @@ namespace BaseCharacter
                 case "effect":
                 case "attribute":
                 case "attri":
-                case "eff":
                 case "effec":
                 case "efect":
+                case "eff":
+                case "ef":
                     return (LibraryObjects.AttributeTemplete);
                 case "entity":
                 case "enemy":
-                case "killable":
+                case "enem":
+                case "ene":
+                case "en":
                     return (LibraryObjects.Entities);
                 case "it":
                 case "ite":
@@ -252,15 +254,17 @@ namespace BaseCharacter
                 case "inventory":
                 case "inv":
                 case "armor":
+                case "i":
                     return (LibraryObjects.InventoryItem);
                 case "quest":
                 case "mission":
                 case "quests":
                 case "missions":
-                case "miss":
                     return (LibraryObjects.Quests);
                 default:
-                    return (LibraryObjects.None);
+                    if (!ReturnDefault)
+                        return (LibraryObjects.None);
+                    return DefaultLibaryObject;
             }
         }
         /// <summary>
@@ -587,7 +591,6 @@ namespace BaseCharacter
                         var textCaptures = commands[i].Groups["text"].Captures;
                         int annoIndex = 0;
                         int lastNumValue = SlashRegex.GetSlashFinalNumber(commands[i], out bool found);
-                        lastNumValue = Mathf.Clamp(lastNumValue, 0, inventorySize);
                         bool processedAnnotations = false;
                         if (found)
                         {
@@ -609,10 +612,6 @@ namespace BaseCharacter
                         if (!found && !processedAnnotations)
                         {
                             lastNumValue = DefaultInventoryItemAmount;
-                        }
-                        else
-                        {
-                            lastNumValue = 0;
                         }
                         if (lastNumValue > 0)
                         {
@@ -815,19 +814,33 @@ namespace BaseCharacter
                     Debug.LogWarning("@ annotation not fully functional yet");
                 }
             }
+            for (int i = 0; i < settings.Groups["param"].Captures.Count; i++) 
+            {
+                try
+                {
+                    DefaultLibaryObject = SlashRegex.GetSlashLibarySearch(settings, 0);
+
+                }
+                catch
+                {
+                    Debug.LogWarning("");
+                }
+            }
         }
         /// <summary>
         /// Defualt amount
         /// </summary>
         public static int DefaultInventoryItemAmount { get; private set; } = 1;
+        public static LibraryObjects DefaultLibaryObject { get; private set; } = LibraryObjects.InventoryItem;
         /// <summary>
         /// Default targets
         /// </summary>
         public static List<RegexTarget> DefaultTarget { get; private set; } = new List<RegexTarget>();
-        public static void SetAllDefaultRegex(int size, List<int> targ)
+        public static void SetAllDefaultRegex(int size, List<int> targ, int libaryObject)
         {
             DefaultInventoryItemAmount = size;
             DefaultTarget.Clear();
+            DefaultLibaryObject = (LibraryObjects)libaryObject;
             for (int i = 0; i < targ.Count; i++)
             {
                 DefaultTarget.Add((RegexTarget)targ[i]);
@@ -2235,6 +2248,11 @@ namespace BaseCharacter
                     SetMinTime();
                     LastMoveState = MoveStates.OnRelease;
                 }
+                if (state == MoveStates.OnHold && LastMoveState == MoveStates.OnRelease)
+                {
+                    SetMaxTime();
+                    LastMoveState = MoveStates.OnHold;
+                }
             }
             public float GetDelta()
             {
@@ -3629,6 +3647,14 @@ namespace BaseCharacter
                 catch (Exception ex)
                 {
                     Debug.LogAssertion(ex);
+                    try
+                    {
+                        return (Project[0]);
+                    }
+                    catch (Exception ex2)
+                    {
+                        Debug.LogAssertion(ex2);
+                    }
                 }
                 Debug.LogAssertion("Error finding projectile");
                 return null;
@@ -4848,7 +4874,6 @@ namespace BaseCharacter
             protected int SizeOfObject { get; set; }
             public int Price { get; protected set; }
             protected Item Item { get; set; }
-            protected List<GameObject> PrefabObject { get; set; } = new List<GameObject>();
             /// <summary>
             /// The Item Type.
             /// </summary>
@@ -4867,6 +4892,8 @@ namespace BaseCharacter
             /// </summary>
             protected bool IsCharging { get; set; }
             public bool MarkedForDeletion { get; protected set; } = false;
+            private float weight;
+            public float Weight { get { return weight * amount; } protected set { weight = value; } }
             /// <summary>
             /// Setup the InventoryItem with a weapon.
             /// </summary>
@@ -4876,7 +4903,7 @@ namespace BaseCharacter
             /// <param name="price">How much does the item cost.</param>
             /// <param name="hold">Can this weapon hold multiple of itself in one slot</param>
             /// <param name="maxAmount">Maximum amount in hand</param>
-            public InventoryItem(Weapon item, HoldingType hold, int size, int price, Texture uiIcon, int maxAmount = 1)
+            public InventoryItem(Weapon item, HoldingType hold, int size, int price, float weight, Texture uiIcon, int maxAmount = 1)
             {
                 Name = item.GetName();
                 Description = item.GetDesc();
@@ -4886,6 +4913,7 @@ namespace BaseCharacter
                 UiIcon = uiIcon;
                 Price = price;
                 HoldingType = hold;
+                Weight = weight;
                 if (HoldingType == HoldingType.LimitedStackable)
                 {
                     this.maxAmount = maxAmount;
@@ -4905,7 +4933,7 @@ namespace BaseCharacter
             /// <param name="price">How expensive</param>
             /// <param name="uiIcon"></param>
             /// <param name="maxAmount"></param>
-            public InventoryItem(Consumable item, int size, HoldingType hold, int price, Texture uiIcon, int maxAmount = 1)
+            public InventoryItem(Consumable item, int size, HoldingType hold, int price, float weight, Texture uiIcon, int maxAmount = 1)
             {
                 Name = item.GetName();
                 Description = item.GetDesc();
@@ -4915,6 +4943,7 @@ namespace BaseCharacter
                 UiIcon = uiIcon;
                 Price = price;
                 HoldingType = hold;
+                Weight = weight;
                 if (HoldingType == HoldingType.LimitedStackable)
                 {
                     this.maxAmount = maxAmount;
@@ -4932,7 +4961,7 @@ namespace BaseCharacter
             /// <param name="hold">Holding type</param>
             /// <param name="size"></param>
             /// <param name="uiIcon"></param>
-            public InventoryItem(Item item, int size, HoldingType hold, int price, Texture uiIcon, int maxAmount = 1)
+            public InventoryItem(Item item, int size, HoldingType hold, int price, float weight, Texture uiIcon, int maxAmount = 1)
             {
                 HoldingType = hold;
                 Name = item.GetName();
@@ -4943,6 +4972,7 @@ namespace BaseCharacter
                 ItemType = item.GetItemType();
                 UiIcon = uiIcon;
                 Price = price;
+                Weight = weight;
                 if (HoldingType == HoldingType.LimitedStackable)
                 {
                     this.maxAmount = maxAmount;
@@ -5008,7 +5038,7 @@ namespace BaseCharacter
             /// <param name="description"></param>
             /// <param name="size"></param>
             /// <param name="uiIcon"></param>
-            public InventoryItem(Armor item, int size, HoldingType hold, int price, Texture uiIcon, int maxAmount = 1)
+            public InventoryItem(Armor item, int size, HoldingType hold, int price, float weight, Texture uiIcon, int maxAmount = 1)
             {
                 Name = item.GetName();
                 Description = item.GetDesc();
@@ -5018,6 +5048,7 @@ namespace BaseCharacter
                 UiIcon = uiIcon;
                 Price = price;
                 HoldingType = hold;
+                Weight = weight;
                 if (HoldingType == HoldingType.LimitedStackable)
                 {
                     this.maxAmount = maxAmount;
@@ -5060,6 +5091,7 @@ namespace BaseCharacter
                 Item = new Item("Empty", ItemType.Empty);
                 SlotID = id;
                 Price = 0;
+                Weight = 0;
             }
             public void SetSlotId(int id)
             {
@@ -5263,7 +5295,7 @@ namespace BaseCharacter
                 IsCharging = other.IsCharging;
                 HoldingType = other.HoldingType;
                 MarkedForDeletion = other.MarkedForDeletion;
-
+                Weight = other.Weight;
 
                 // Deep copy the Item based on its type
                 if (other.Item != null)
@@ -5289,13 +5321,8 @@ namespace BaseCharacter
                     }
                 }
 
-                // Copy collections and references
-                PrefabObject = other.PrefabObject != null
-                    ? new List<GameObject>(other.PrefabObject)
-                    : new List<GameObject>();
-
                 UiIcon = other.UiIcon; // Texture is typically managed by Unity
-                Material = other.Material; // Material is typically managed by Unity
+                Material = other.Material;
             }
             /// <summary>
             /// Get how many you can hold
@@ -5597,12 +5624,26 @@ namespace BaseCharacter
         /// Hotbar Size.
         /// </summary>
         protected int HotbarSize { get; set; } = 6;
-
-        #region Fill Null Inventory
         /// <summary>
-        /// Clear an inventory and then fill it with empty items which can be moved or erased. 
-        /// Used to clear an inventory or to fill a Null inventory.
+        /// Returns the total weight of all the items.
         /// </summary>
+        protected float TotalWeight
+        {
+            get 
+            {
+                float weight = 0;
+                for (int i = 0; i < Inventory.Count; i++)
+                {
+                    weight += Inventory[i].Weight;
+                }
+                return weight;
+            }
+        }
+        #region Fill Null Inventory
+            /// <summary>
+            /// Clear an inventory and then fill it with empty items which can be moved or erased. 
+            /// Used to clear an inventory or to fill a Null inventory.
+            /// </summary>
         public void FillNullInventory()
         {
             Inventory.Clear();
@@ -5729,7 +5770,12 @@ namespace BaseCharacter
 
             return true; // Item was fully stacked
         }
-
+        /// <summary>
+        /// Find an empty slot for an item
+        /// </summary>
+        /// <param name="item">Item to add</param>
+        /// <param name="start">Start location for search</param>
+        /// <returns></returns>
         private bool FindEmptySlotForItem(InventoryItem item, int start)
         {
             // Try to find an empty slot from start position
@@ -5752,7 +5798,12 @@ namespace BaseCharacter
             Debug.Log("After searching for space in your inventory, we found NOTHING open.");
             return false;
         }
-
+        /// <summary>
+        /// Try to place an item in a slot.
+        /// </summary>
+        /// <param name="item">the item to add</param>
+        /// <param name="slotIndex">Start slot index</param>
+        /// <returns>Was it successfull</returns>
         private bool TryPlaceItemInSlot(InventoryItem item, int slotIndex)
         {
             if (slotIndex < Inventory.Count)
@@ -6063,10 +6114,6 @@ namespace BaseCharacter
             }
             return typeTori;
         }
-        public List<InventoryItem> GetNewInventory()
-        {
-            return new List<InventoryItem>(Inventory);
-        }
         /// <summary>
         /// Get a single inventory item based on slot id.
         /// </summary>
@@ -6099,6 +6146,9 @@ namespace BaseCharacter
         }
         #endregion
         #region Full Scan
+        /// <summary>
+        /// Check passive data of items.
+        /// </summary>
         public void CheckPassive()
         {
             for (int i = 0; i < Inventory.Count; i++)
@@ -6196,13 +6246,13 @@ namespace BaseCharacter
         public float GravityBase { get; protected set; }
         public float GravityProtectionTime { get; protected set; }
         /// <summary>
-        /// Your Weight. 1000 is the normal
+        /// Your Weight. 100 is the normal
         /// </summary>
         public float Weight
         {
             get
             {
-                return WeightBase * WeightAdjustment.Strength;
+                return WeightBase * WeightAdjustment.Strength + TotalWeight;
             }
         }
         /// <summary>
@@ -6304,7 +6354,7 @@ namespace BaseCharacter
         /// <summary>
         /// Lets you create a basic player with the basic attributes.<br></br>
         /// </summary>
-        /// <param name="name">The name of the Player</param>
+        /// <param name="name">The name of the player</param>
         /// <param name="healthBase">Your Starting Health</param>
         /// <param name="hpStartPercent">Percentage (A value from 0 to 1)</param>
         /// <param name="speedBase">Your base speed</param>
@@ -6528,14 +6578,6 @@ namespace BaseCharacter
 
         #endregion
         #region Weight
-        /// <summary>
-        /// Returns the Weight
-        /// </summary>
-        /// <returns>Weight</returns>
-        public float GetWeight()
-        {
-            return Weight;
-        }
         /// <summary>
         /// Set WeightAdjustment. You cannot effect WeightBase. 
         /// <code> Weight = WeightBase + WeightAdjustment;</code>
@@ -6888,11 +6930,18 @@ namespace BaseCharacter
         {
             return ActiveRegenerations.Count > 0;
         }
+        /// <summary>
+        /// Apply stats from adjustments
+        /// </summary>
         public void ApplyStatAdjustments()
         {
             SpeedBonus.CheckTime();
             JumpBonus.CheckTime();
             GroundPoundBonus.CheckTime();
+            VisionAdjustment.CheckTime();
+            WeightAdjustment.CheckTime();
+            AimAdjustment.CheckTime();
+
         }
         #endregion
         #region Leveling
@@ -7652,7 +7701,26 @@ namespace BaseCharacter
         /// </summary>
         public class StatHealth : Stat, IHealth
         {
+            /// <summary>
+            /// Are you alive?
+            /// </summary>
             private bool isAlive = true;
+            /// <summary>
+            /// Your Current Health.
+            /// <code>
+            /// get
+            /// {
+            ///     return <see cref="current"/>
+            /// }
+            /// set
+            /// {
+            ///    current = Mathf.Min(value, Max);
+            /// }
+            /// </code>
+            /// </summary>
+            /// <remarks>
+            /// If your health goes below or equil to 0, the value <see cref="isAlive"/> will be set to false.
+            /// </remarks>
             public float Current
             {
                 get
@@ -7672,8 +7740,22 @@ namespace BaseCharacter
                     }
                 }
             }
+            /// <summary>
+            /// Your current health
+            /// </summary>
             private float current;
+            /// <summary>
+            /// Resistances to damage
+            /// </summary>
             protected float[] Resistances { get; set; } = new float[Enum.GetValues(typeof(WeaponClass)).Length];
+            /// <summary>
+            /// Setup Health Stat
+            /// </summary>
+            /// <param name="name">Name of stat</param>
+            /// <param name="level1Stat">Value at level 1</param>
+            /// <param name="increasePerLevel">Increase per level.</param>
+            /// <param name="currentLevel">Current level</param>
+            /// <param name="currentValue">Current value</param>
             public StatHealth(string name, int level1Stat, int increasePerLevel, int currentLevel, float currentValue) : base(name, level1Stat, increasePerLevel, currentLevel)
             {
                 Current = currentValue;
@@ -7687,6 +7769,10 @@ namespace BaseCharacter
             {
                 Resistances[(int)wpn] = amount;
             }
+            /// <summary>
+            /// Damage a player and bypass resistances.
+            /// </summary>
+            /// <param name="value">Value of damage</param>
             public void DamagePlayer(float value)
             {
                 value = Mathf.Max(value, 0);
@@ -7694,12 +7780,12 @@ namespace BaseCharacter
             }
 
             /// <summary>
-            /// Damage the player with some extra data
+            /// Damage the player with resistances applied. 
             /// </summary>
             /// <param name="value">Damage amount</param>
             /// <param name="weapon">Weapon type.</param>
             /// <param name="fake">Doesn't damage the player</param>
-            /// <returns></returns>
+            /// <returns>The amount of health you would have after being damaged.</returns>
             public float DamagePlayer(float value, WeaponClass weapon, bool fake = false)
             {
                 value = ((float)value * Resistances[(int)weapon]);
@@ -7711,7 +7797,7 @@ namespace BaseCharacter
                 return Current;
             }
             /// <summary>
-            /// Damage the player with some extra data, Along with the ability to make a minimum health Barriar
+            /// Damage the player with resistances applied. Along with the ability to make a minimum health Barriar
             /// </summary>
             /// <param name="value">Damage amount</param>
             /// <param name="weapon">Weapon type.</param>
@@ -7808,6 +7894,9 @@ namespace BaseCharacter
         /// </summary>
         public class StatAdjustment
         {
+            /// <summary>
+            /// Returns the <see cref="strength"/> value <u>unless</u> <see cref="hasStarted"/> is <see cref="false"/>.
+            /// </summary>
             public float Strength
             {
                 get
@@ -7819,27 +7908,34 @@ namespace BaseCharacter
                     return strength;
                 }
             }
+            /// <summary>
+            /// The strength of the effect
+            /// </summary>
             private float strength = 1f;
+            /// <summary>
+            /// When will the effect end?
+            /// </summary>
             public float EndTime { get; private set; } = 0f;
-            private float timeBase;
-            private float RiseFall { get; set; }
+            /// <summary>
+            /// Has the effect started?
+            /// </summary>
             private bool hasStarted;
-
             public void SetAdjustment(float strength, float time)
             {
                 this.strength += strength;
                 if (Time.time < EndTime)
                 {
-                    timeBase += time;
                     EndTime += time;
                 }
                 else
                 {
-                    timeBase = time;
                     EndTime = Time.time + time;
                 }
                 hasStarted = true;
             }
+            /// <summary>
+            /// Check the current time.
+            /// </summary>
             public void CheckTime()
             {
                 if (hasStarted && Time.time >= EndTime)
@@ -7847,15 +7943,15 @@ namespace BaseCharacter
                     Reset();
                 }
             }
-
+            /// <summary>
+            /// Reset the value
+            /// </summary>
             private void Reset()
             {
                 strength = 1f;
                 EndTime = 0f;
                 hasStarted = false;
             }
-
-
         }
     }
 }
