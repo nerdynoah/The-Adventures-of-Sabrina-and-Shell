@@ -6,8 +6,6 @@ using UnityEngine;
 public class TerrainEditor : MonoBehaviour
 {
     [SerializeField] private Terrain terrian;
-
-
     [SerializeField] private AnimationCurve[] PerlinSlope;
     [SerializeField] private AnimationCurve PerlinFluxSlope;
     [Range(0.0001f, 0.05f)]

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using BaseCharacter.Items;
 using static Enums;
+using BaseCharacter;
 public class EntitySpawner : MonoBehaviour
 {
     [Header("Setup")]
@@ -55,7 +56,8 @@ public class EntitySpawner : MonoBehaviour
         {
             for (int i = 0; i < enemyTMP.Count; i++)
             {
-                GameObject entity = Instantiate(enemyTMP[i].gameObject, transform.position,transform.rotation);
+                Vector3 spawnLocation = transform.position + new Vector3(Methods.GetRandomNegativePositive(box.size.x), Methods.GetRandomNegativePositive(box.size.y), Methods.GetRandomNegativePositive(box.size.z));
+                GameObject entity = Instantiate(enemyTMP[i].gameObject, spawnLocation, transform.rotation);
                 EntityTemplete temp = entity.GetComponent<EntityTemplete>();
                 temp.player.ApplyAttribute(attributesTempletes[i]);
             }

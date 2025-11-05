@@ -10,7 +10,7 @@ public class ProjectileTemplete : MonoBehaviour
     [SerializeField] private float Gravity;
     [SerializeField][Min(0.0001f)] private float Speed;
     [SerializeField][Min(0.05f)] private float LiveTime;
-    [Tooltip("-10 on collision with hurtboxes, -1 on collision of anything else.")]
+    [Tooltip("-100 on collision with hurtboxes, -1 on collision of anything else.")]
     [SerializeField][Min(1)] private int Piercing;
     [SerializeField][Min(0.0001f)] private float Size;
     [Tooltip("Lob a shot")]
@@ -38,6 +38,10 @@ public class ProjectileTemplete : MonoBehaviour
     [SerializeField] private string[] Attributes;
     [SerializeField] private GameObject SphereicalObject;
     [SerializeField] private float Damage;
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <returns>A new <see cref="Projectile"/></returns>
     public Projectile GetProjectile()
     {
         return new Projectile(Gravity, Yeet, Speed, LiveTime, Piercing, Size, Weight, Damage, StartFallOffDistace, EndFallOffDistance, DamageAfterMaxFallOff, ExplosiveSize,ExplosiveTime,SmallExplosiveSize,ExplosiveMinPercentFalloff, KnockBack, SphereicalObject);

@@ -1,10 +1,14 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static Enums;
 
 public class EnemyBrain : MonoBehaviour
 {
-    // Start is called before the first frame update
+    [SerializeField] private PathMode DefaultPathMode;
+    [SerializeField] private WanderMode wanderMode;
+    [SerializeField] private FiveSenses[] inspectionModes = new FiveSenses[Enum.GetValues(typeof(FiveSenses)).Length];
     void Start()
     {
         

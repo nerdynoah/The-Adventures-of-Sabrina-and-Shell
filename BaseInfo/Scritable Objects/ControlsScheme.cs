@@ -21,6 +21,7 @@ public class ControlsScheme : ScriptableObject
     public KeyCode utilityKey = KeyCode.V;
     public KeyCode reload = KeyCode.A;
     public KeyCode interact = KeyCode.T;
+    public KeyCode throwItem = KeyCode.Q;
     public KeyCode Inventory = KeyCode.H;
     [Header("HotBar Slots")]
     public KeyCode moveKey = KeyCode.E;
@@ -34,8 +35,6 @@ public class ControlsScheme : ScriptableObject
     public KeyCode slot8 = KeyCode.Alpha8;
     public KeyCode slot9 = KeyCode.Alpha9;
     public KeyCode slot10 = KeyCode.Alpha0;
-    public KeyCode slot11 = KeyCode.Minus;
-    public KeyCode slot12 = KeyCode.Plus;
     [Header("Options")]
     public KeyCode PauseGame = KeyCode.Escape;
     public KeyCode HelpMenu = KeyCode.F1;

@@ -10,6 +10,7 @@ using static Enums;
 public class HurtBox : MonoBehaviour
 {
     [SerializeField] private CapsuleCollider capsuleCollider;
+    private BoxCollider boxCollider;
     private List<QueueInfo> queue = new List<QueueInfo>();
     private bool haltQueue = false;
 
@@ -57,9 +58,42 @@ public class HurtBox : MonoBehaviour
     {
         haltQueue = halt;
     }
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <returns></returns>
     public float GetSize()
     {
-        return capsuleCollider.radius;
-    }
+        try
+        {
+            return capsuleCollider.radius;
+        }
+        catch
+        {
+            try
+            {
+                return boxCollider.size.magnitude;
+            }
+            catch
+            {
+                return 1;
+            }
+            
+        }
 
+    }
+    public void Awake()
+    {
+        if (capsuleCollider == null)
+        {
+            boxCollider = GetComponent<BoxCollider>();
+        }
+    }
+    public void Start()
+    {
+        if (capsuleCollider == null)
+        {
+            boxCollider = GetComponent<BoxCollider>();
+        }
+    }
 }

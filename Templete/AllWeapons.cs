@@ -15,7 +15,7 @@ public class AllLibary : MonoBehaviour
     private Quest cashCow;
     private Quest mrFaceClear;
     private Quest finalBoss;
-    private readonly Libary libary = new Libary();
+    private readonly Libary libary = new();
     [SerializeField] private WeaponTemplete[] weaponTempletes;
     [SerializeField] private AmmoTemplete[] ammoTempletes;
     [SerializeField] private EntityTemplete[] entityTempletes;
@@ -30,77 +30,106 @@ public class AllLibary : MonoBehaviour
         /// </summary>
         private Dictionary<string,InventoryItem> Inventory { get; set; } = new Dictionary<string, InventoryItem>();
         private List<Quest> Quests { get; set; } = new List<Quest>();
-        private Dictionary<string, EntityTemplete> Entitiess { get; set; } = new Dictionary<string, EntityTemplete>();
+        private Dictionary<string, EntityTemplete> Entities { get; set; } = new Dictionary<string, EntityTemplete>();
         private Dictionary<string, AttributesTemplete> Attributes { get; set; } = new Dictionary<string, AttributesTemplete>();
+        /// <summary>
+        /// New <see cref="InventoryItem"/> object to a searchable libary.
+        /// </summary>
+        /// <param name="item">Inventory Item</param>
         /// <summary>
         /// New <see cref="InventoryItem"/> object to a searchable libary.
         /// </summary>
         /// <param name="item">Inventory Item</param>
         public void AddInventoryItem(InventoryItem item)
         {
-            try
+            if (item == null)
             {
-                if (item.GetName() == Inventory[item.GetName()].GetName())
-                {
-                    Debug.LogWarning($"Already found a object named {item.GetName()}");
-                    return;
-                }
-            }
-            catch
-            {
-                //Debug.Log($"Adding Item {item.GetName()}");
-                Inventory.Add(item.GetName(), item);
-                //Debug.Log($"Added to inventory, found: {Inventory[item.GetName()].GetName()}");
-                //This method works as indentended.
+                Debug.LogWarning("Attempted to add null InventoryItem");
                 return;
             }
-            Inventory.Add(item.GetName(), item);
+
+            string itemName = item.GetName();
+            if (string.IsNullOrEmpty(itemName))
+            {
+                Debug.LogWarning("Attempted to add InventoryItem with null or empty name");
+                return;
+            }
+
+            if (Inventory.ContainsKey(itemName))
+            {
+                Debug.LogWarning($"Already found a object named {itemName}");
+                return;
+            }
+
+            Debug.Log($"Adding Item {itemName}");
+            Inventory.Add(itemName, item);
         }
         public void AddInventoryItem(params InventoryItem[] items)
         {
+            if (items == null) return;
+
             foreach (var item in items)
             {
                 AddInventoryItem(item);
             }
         }
+
         public void AddQuest(Quest quest)
         {
+            if (quest == null)
+            {
+                Debug.LogWarning("Attempted to add null Quest");
+                return;
+            }
+
             Quests.Add(quest);
             SortByName();
         }
-        public void AddEntities(EntityTemplete entities)
+        public void AddEntities(EntityTemplete entity)
         {
-            try
+            if (entity == null)
             {
-                if (entities.GetName() == Entitiess[entities.GetName()].GetName())
-                {
-                    Debug.LogWarning($"Already found a object named {entities.GetName()}");
-                    return;
-                }
-            }
-            catch
-            {
-                Entitiess.Add(entities.GetName(), entities);
+                Debug.LogWarning("Attempted to add null EntityTemplete");
                 return;
             }
-            Entitiess.Add(entities.GetName(), entities);
+
+            string entityName = entity.GetName();
+            if (string.IsNullOrEmpty(entityName))
+            {
+                Debug.LogWarning("Attempted to add EntityTemplete with null or empty name");
+                return;
+            }
+
+            if (Entities.ContainsKey(entityName))
+            {
+                Debug.LogWarning($"Already found a object named {entityName}");
+                return;
+            }
+
+            Entities.Add(entityName, entity);
         }
         public void AddAttribute(AttributesTemplete value)
         {
-            try
+            if (value == null)
             {
-                if (value.GetName() == Attributes[value.GetName()].GetName())
-                {
-                    Debug.LogWarning($"Already found a object named {value.GetName()}");
-                    return;
-                }
-            }
-            catch
-            {
-                Attributes.Add(value.GetName(), value);
+                Debug.LogWarning("Attempted to add null AttributesTemplete");
                 return;
             }
-            Attributes.Add(value.GetName(), value);
+
+            string attributeName = value.GetName();
+            if (string.IsNullOrEmpty(attributeName))
+            {
+                Debug.LogWarning("Attempted to add AttributesTemplete with null or empty name");
+                return;
+            }
+
+            if (Attributes.ContainsKey(attributeName))
+            {
+                Debug.LogWarning($"Already found a object named {attributeName}");
+                return;
+            }
+
+            Attributes.Add(attributeName, value);
         }
         public void AddAttribute(params AttributesTemplete[] value)
         {   
@@ -116,6 +145,11 @@ public class AllLibary : MonoBehaviour
         /// <returns></returns>
         public AttributesTemplete GetAttribute(string name)
         {
+            if (string.IsNullOrEmpty(name) || !Attributes.ContainsKey(name))
+            {
+                Debug.LogWarning($"Attribute '{name}' not found in library");
+                return null;
+            }
             return Attributes[name];
         }
         /// <summary>
@@ -125,12 +159,19 @@ public class AllLibary : MonoBehaviour
         /// <returns>WeaponTemplete</returns>
         public InventoryItem GetInventoryItem(string name)
         {
-            Debug.Log($"Getting inventoryItem by {name} {Inventory[name].GetName()}"); //Code found an item named Shells, yet when I use the return, its like "erm, wtf"
-            return Inventory[name];
+            if (string.IsNullOrEmpty(name) || !Inventory.ContainsKey(name))
+            {
+                Debug.LogWarning($"InventoryItem '{name}' not found in library");
+                return null;
+            }
+
+            var item = Inventory[name];
+            Debug.Log($"Getting inventoryItem by {name} -> {item?.GetName()}");
+            return item;
         }
         public List<string> GetInventoryItemNames() => Inventory.Keys.ToList();
         public List<string> GetEffectNames() => Attributes.Keys.ToList();
-        public List<string> GetEntitityNames() => Entitiess.Keys.ToList();
+        public List<string> GetEntitityNames() => Entities.Keys.ToList();
 
         public Quest GetQuest(string name)
         {
@@ -161,7 +202,12 @@ public class AllLibary : MonoBehaviour
         }
         public EntityTemplete GetEntities(string name)
         {
-            return Entitiess[name];
+            if (string.IsNullOrEmpty(name) || !Entities.ContainsKey(name))
+            {
+                Debug.LogWarning($"Entity '{name}' not found in library");
+                return null;
+            }
+            return Entities[name];
         }
         public List<Quest> GetQuestList()
         {
@@ -304,9 +350,10 @@ public class AllLibary : MonoBehaviour
     private void SetupAttributes()
     {
         //Single Level Effects
-        libary.AddAttribute(new AttributesTemplete("Speed Boost Fire", Attributes.Speed, 1.5f, 10f, 0));
-        libary.AddAttribute(new AttributesTemplete("Speed Boost Sparkle", Attributes.Speed, 5f, 5f, 0));
+        libary.AddAttribute(new AttributesTemplete("Speed Boost Fire", Attributes.Speed, 1.15f, 10f, 0));
+        libary.AddAttribute(new AttributesTemplete("Speed Boost Sparkle", Attributes.Speed, 2f, 5f, 0));
         libary.AddAttribute(new AttributesTemplete("Speed Boost 35", Attributes.Speed, 1.35f, 3.2f, -1));
+        libary.AddAttribute(new AttributesTemplete("Speed Boost FlameThrower", Attributes.Speed, 1.01f, 3.5f, 0));
         libary.AddAttribute(new AttributesTemplete("Poison Damage 1", Attributes.Poison, 0.1f, 4f, 0.15f));
         libary.AddAttribute(new AttributesTemplete("Poison Damage 2", Attributes.Poison, 0.2f, 5f, 0.12f));
         libary.AddAttribute(new AttributesTemplete("Poison Damage 3", Attributes.Poison, 0.3f, 6f, 0.1f));
@@ -338,26 +385,55 @@ public class AllLibary : MonoBehaviour
         libary.AddAttribute(new AttributesTemplete("Regeneration 1", Attributes.Regeneration, 0.18f, 5, 0.2f));
         libary.AddAttribute(new AttributesTemplete("Regeneration 2", Attributes.Regeneration, 0.2f, 7, 0.2f));
         libary.AddAttribute(new AttributesTemplete("Regeneration 3", Attributes.Regeneration, 0.225f, 8, 0.15f));
+        libary.AddAttribute(new AttributesTemplete("Regeneration Sniper", Attributes.Regeneration, 1.2f, 5, 0.6f));
         libary.AddAttribute(new AttributesTemplete("Flytation", Attributes.Flytation, 2, 8, 1));
         
 
         //Multi-Level Effects
         libary.AddAttribute(new AttributesTemplete("Fire Damage 1", Attributes.Poison, 0.5f, 8f, 1f, "Speed Boost Fire"));
         libary.AddAttribute(new AttributesTemplete("Fire Damage 2", Attributes.Poison, 0.7f, 8f, 0.9f, "Speed Boost Fire"));
+        libary.AddAttribute(new AttributesTemplete("Fire Damage FlameThrower", Attributes.Poison, 0.2f, 3f, 0.1f));
         libary.AddAttribute(new AttributesTemplete("Spark Fire Damage 1", Attributes.Poison, 0.1f, 4f, 0.15f, "Speed Boost Sparkle"));
         libary.AddAttribute(new AttributesTemplete("Spark Fire Damage 2", Attributes.Poison, 0.15f, 3.558f, 0.1f, "Speed Boost Sparkle"));
     }
     private void SetupAmmo()
     {
+        if (libary == null) {
+            Debug.LogError("WeaponTempletes array is null!");
+            return;
+        }
         for (int i = 0; i < ammoTempletes.Length; i++)
         {
+            if (ammoTempletes[i] == null)
+            {
+                Debug.LogAssertion($"WeaponTemplate at index {i} is null!");
+                continue;
+            }
+            if (ammoTempletes[i].GetAmmo() == null)
+            {
+                Debug.LogAssertion($"AmmoTemplete item is null");
+            }
             libary.AddInventoryItem(ammoTempletes[i].GetAmmo());
         }
     }
     private void SetupItems()
     {
+        if (weaponTempletes == null)
+        {
+            Debug.LogAssertion("WeaponTempletes array is null!");
+            return;
+        }
         for (int i = 0; i < weaponTempletes.Length; i++)
         {
+            if (weaponTempletes[i] == null)
+            {
+                Debug.LogAssertion($"WeaponTemplate at index {i} is null!");
+                continue;
+            }
+            if (weaponTempletes[i].GetItem() == null)
+            {
+                Debug.LogAssertion($"WeaponTemplete inventoryItem at {i} index is null!!!!");
+            }
             libary.AddInventoryItem(weaponTempletes[i].GetItem());
         }
     }
@@ -368,27 +444,28 @@ public class AllLibary : MonoBehaviour
             libary.AddEntities(entityTempletes[i]);
         }
     }
-    public AttributesTemplete[] SearchLibaryForAttribute(params string[] name)
+    public AttributesTemplete[] SearchLibaryForAttribute(params string[] names)
     {
-        AttributesTemplete[] work = new AttributesTemplete[name.Length];
-        for (int i = 0; i < name.Length; i++)
+        if (names == null) return Array.Empty<AttributesTemplete>();
+
+        AttributesTemplete[] work = new AttributesTemplete[names.Length];
+        for (int i = 0; i < names.Length; i++)
         {
-            Debug.Log($"Name of object: {name[i]}");
-            AttributesTemplete temp = libary.GetAttribute(name[i]);
-            if (temp != null)
-            {
-                work[i] = temp;
-            }
-            if (temp == null)
-            {
-                work[i] = null;
-            }
+            Debug.Log($"Name of attribute: {names[i]}");
+            work[i] = libary.GetAttribute(names[i]);
         }
         return work;
     }
+
     public AttributesTemplete SearchLibaryForAttribute(string name)
     {
-        AttributesTemplete work = libary.GetAttribute(name);
+        if (string.IsNullOrEmpty(name))
+        {
+            Debug.LogWarning("Attribute name is null or empty");
+            return null;
+        }
+
+        var work = libary.GetAttribute(name);
         if (work != null)
         {
             Debug.Log($"Found {work.GetName()}");
@@ -397,40 +474,44 @@ public class AllLibary : MonoBehaviour
         Debug.Log("No Attribute found");
         return null;
     }
-    public InventoryItem[] SearchLibaryForTemplete(params string[] name)
+    public InventoryItem[] SearchLibaryForTemplete(params string[] names)
     {
-        InventoryItem[] work = new InventoryItem[name.Length];
-        for (int i = 0; i < name.Length; i++)
+        if (names == null) return Array.Empty<InventoryItem>();
+
+        InventoryItem[] work = new InventoryItem[names.Length];
+        for (int i = 0; i < names.Length; i++)
         {
             try
             {
-                Debug.Log($"Name of object: {name[i]}");
-                InventoryItem temp = new(libary.GetInventoryItem(name[i]));
-                Debug.Log($"Found item named {temp.GetName()}"); //Crashes before this point....
+                Debug.Log($"Name of object: {names[i]}");
+                var temp = libary.GetInventoryItem(names[i]);
                 if (temp != null)
                 {
-                    work[i] = temp;
-                }
-                if (temp == null)
-                {
-                    work[i] = null;
+                    work[i] = new InventoryItem(temp); // Use copy constructor
+                    Debug.Log($"Found item named {work[i]?.GetName()}");
                 }
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"No item names {name[i]} found OR {e}");
-                continue;
+                Debug.LogWarning($"No item named {names[i]} found OR {e}");
+                work[i] = null;
             }
         }
         return work;
     }
     public InventoryItem SearchLibaryForTemplete(string name)
     {
+        if (string.IsNullOrEmpty(name))
+        {
+            Debug.LogWarning("Item name is null or empty");
+            return null;
+        }
+
         Debug.Log($"Name of object: {name}");
-        InventoryItem temp = libary.GetInventoryItem(name);
+        var temp = libary.GetInventoryItem(name);
         if (temp != null)
         {
-            return temp;
+            return new InventoryItem(temp); // Use copy constructor
         }
         Debug.Log("No Item found");
         return null;

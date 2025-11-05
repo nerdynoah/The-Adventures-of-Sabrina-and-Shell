@@ -363,7 +363,8 @@ public class Movement : MonoBehaviour
             ray = GetCamera().ScreenPointToRay(ThemousePosition);
             ogRay = GetCamera().ScreenPointToRay(ThemousePosition);
         }
-        Physics.Raycast(ray, out RaycastHit hit, 1000, ~0);
+        int includeMask = (1 << 0) | (1 << 7) | (1 << 10) | (1 << 11);
+        Physics.Raycast(ray, out RaycastHit hit, 1000, includeMask);
         Debug.Log(hit.point);
         return hit;
     }

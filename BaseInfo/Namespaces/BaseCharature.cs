@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.SceneManagement;
@@ -891,7 +892,7 @@ namespace BaseCharacter
             }
             public readonly InventoryItem GetItem()
             {
-                return SetItemAmount(new InventoryItem(AllLibary.ItemLibary.SearchLibaryForTemplete(ItemToAdd)));
+                return SetItemAmount(AllLibary.ItemLibary.SearchLibaryForTemplete(ItemToAdd));
             }
             private readonly InventoryItem SetItemAmount(InventoryItem item)
             {
@@ -2381,28 +2382,42 @@ namespace BaseCharacter
             /// Knockback direction
             /// </summary>
             private Vector3 Knockback { get; set; }
+            private Vector3 EndLocation { get; set; }
             private float Weight { get; set; }
             /// <summary>
             /// Setup a knockback force.
             /// </summary>
             /// <param name="knockback">The force</param>
             /// <param name="weight"></param>
-            public ForceKnockback(Vector3 knockback, float weight)
+            public ForceKnockback(Vector3 knockback, Vector3 endLocation, float weight)
             {
                 weight = Mathf.Max(weight, 1);
                 Weight = weight;
+                EndLocation = endLocation;
                 Knockback = knockback;
             }
             /// <summary>
             /// Gets the knockback to apply to the charature
             /// </summary>
-            /// <param name="entitiyWeight">Your/an entities <see cref="Player.Weight"/></param>
-            /// <param name="destroy">Allow the object to be destoryed.</param>
-            /// <returns>Vector3 = <c>Mathf.Pow(<see cref="Weight"/>/<paramref name="entitiyWeight"/>,2) * <see cref="Knockback"/></c></returns>
-            public readonly Vector3 GetKnockback(float entitiyWeight)
+            /// <param name="entityWeight">Your/an entities <see cref="Player.Weight"/></param>
+            /// <param name="entityPosition">Position</param>
+            /// <returns>Knockback</returns>
+            public readonly Vector3 GetKnockback(float entityWeight, Vector3 entityPosition)
             {
-                Vector3 tempKnockback = Mathf.Pow(Weight / entitiyWeight, 2) * Knockback;
-                return tempKnockback;
+                Vector3 direction = (entityPosition - EndLocation).normalized;
+                Vector3 alignedKnockback = direction * Knockback.magnitude;
+                float weightRatio = Mathf.Pow(Weight / Mathf.Max(entityWeight, 1), 2);
+                Vector3 calculatedKnockback = weightRatio * alignedKnockback;
+
+                return calculatedKnockback;
+            }
+
+            /// <summary>
+            /// Gets the raw knockback direction (for debugging)
+            /// </summary>
+            public readonly Vector3 GetRawKnockback()
+            {
+                return Knockback;
             }
         }
         /// <summary>
@@ -2487,6 +2502,12 @@ namespace BaseCharacter
             private readonly float MaxSpeed;
             public float GroundDrag { get; private set; }
             public float AirDrag { get; private set; }
+            /// <summary>
+            /// Setup aireal movement and drag.
+            /// </summary>
+            /// <param name="maxSpeed">Max speed increase in the air. Default = 1.3</param>
+            /// <param name="groundDrag">Drag on the ground, Default = 0.65</param>
+            /// <param name="airDrag">Drag on the air Default = 0.2</param>
             public AirMovement(float maxSpeed, float groundDrag, float airDrag)
             {
                 DirPow = 0;
@@ -3412,15 +3433,6 @@ namespace BaseCharacter
             {
                 return Yeet;
             }
-            /// <summary>
-            /// Get knockback
-            /// </summary>
-            /// <param name="direct"></param>
-            /// <returns></returns>
-            public ForceKnockback GetKnockback()
-            {
-                return new ForceKnockback(KnockBack, Weight);
-            }
             public void SetupProjectile(float damage, int peirce)
             {
                 Damage += damage;
@@ -3436,7 +3448,7 @@ namespace BaseCharacter
         /// <item><see cref="AnimationSys"/>, <see cref="Texture"/>, names of attributes which are located in the <see cref="AllLibary.GetEffectNames()"/>, </item>
         /// </list>
         /// </summary>
-        public class Item : INameDesc
+        public class Item : INameDesc, IDisposable
         {
             /// <summary>
             /// Your name
@@ -3446,6 +3458,7 @@ namespace BaseCharacter
             /// What Instantitation of the weapon is it.
             /// </summary>
             protected ItemType itemType;
+            protected bool disposedValue;
             /// <summary>
             /// ID, I suppose if you wanted to create an item system in a libary based on ID you could use this, otherwise its just pointless. But i'll leave it in for any nerdy ppl.
             /// </summary>
@@ -3735,6 +3748,42 @@ namespace BaseCharacter
                 ExtraDataButton = other.ExtraDataButton?.ToArray() ?? new ExtraDataType[Enum.GetValues(typeof(ExtraDataType)).Length];
             }
 
+            protected virtual void Dispose(bool disposing)
+            {
+                if (!disposedValue)
+                {
+                    if (disposing)
+                    {
+                        // TODO: dispose managed state (managed objects)
+                        for (int i = 0; i < Project.Count; i++)
+                        {
+                            Project[i].Dispose();
+                        }
+                        Project.Clear();
+                    }
+                    // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                    // TODO: set large fields to null
+                    Anim = null;
+                    Effects = null;
+                    disposedValue = true;
+                    CommandRequests = null;
+                    ExtraDataButton = null;
+                }
+            }
+
+            // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+            ~Item()
+            {
+                // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+                Dispose(disposing: false);
+            }
+
+            public void Dispose()
+            {
+                // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+                Dispose(disposing: true);
+                GC.SuppressFinalize(this);
+            }
         }
         /// <summary>
         /// A item to be consumed that only applies an attribute or heals.
@@ -3898,6 +3947,18 @@ namespace BaseCharacter
             protected float StopShootingDecrease { get; set; }
             protected List<string> AcceptedAmmo { get; set; } = new List<string>();
             public int AdditinoalPiercing { get; set; }
+            protected override void Dispose(bool disposing)
+            {
+                if (!disposedValue)
+                {
+                    if (disposing)
+                    {
+                        SphereAccuracy = null;
+                    }
+                    AcceptedAmmo = null;
+                    base.Dispose(disposing);
+                }
+            }
             /// <summary>
             /// Create a Single fire weapon with no extra details.
             /// </summary>
@@ -4807,13 +4868,14 @@ namespace BaseCharacter
 
         }
         /// <summary>
-        /// Used in floating blcoks and used in <see cref="InventorySystem"/> as a list to create an inventory system. Stores the following data:
-        /// <list type="bullet"></list>
+        /// Used in <see cref="InventorySystem"/> as a list to create an inventory system. Stores the following data:
+        /// <list type="bullet">
         /// <item>Stores <see cref="Items.Item"/> and its instantations (i.e: <see cref="Weapon"/>, <see cref="Armor"/></item>
         /// <item>SlotID, Name, Desc, Price, Size, Texture</item>
         /// <item>Can be declared Empty (replacable) in <see cref="InventorySystem"/></item>
+        /// </list>
         /// </summary>
-        public class InventoryItem : INameDesc, IInvetorySystemCompability
+        public class InventoryItem : INameDesc, IInvetorySystemCompability, IDisposable
         {
             /// <summary>
             /// Item's Slot ID. Used when swapping items.
@@ -4873,6 +4935,10 @@ namespace BaseCharacter
             /// </summary>
             protected int SizeOfObject { get; set; }
             public int Price { get; protected set; }
+            /// <summary>
+            /// Size in real life
+            /// </summary>
+            public Vector3 Size { get; protected set; } = new Vector3(1,1,1);
             protected Item Item { get; set; }
             /// <summary>
             /// The Item Type.
@@ -4893,7 +4959,26 @@ namespace BaseCharacter
             protected bool IsCharging { get; set; }
             public bool MarkedForDeletion { get; protected set; } = false;
             private float weight;
+            private bool disposedValue = false;
+
             public float Weight { get { return weight * amount; } protected set { weight = value; } }
+            protected virtual void Dispose(bool disposing)
+            {
+                if (!disposedValue)
+                {
+                    if (disposing)
+                    {
+                        Item?.Dispose();
+                    }
+
+                    // Free unmanaged resources if any
+                    UiIcon = null;
+                    Material = null;
+                    Item = null;
+
+                    disposedValue = true;
+                }
+            }
             /// <summary>
             /// Setup the InventoryItem with a weapon.
             /// </summary>
@@ -4982,6 +5067,7 @@ namespace BaseCharacter
                     this.maxAmount = 1;
                 }
                 Debug.Log($"Holding type: {HoldingType}");
+                Size = new Vector3(0.88f, 0.88f, 0.88f);
             }
             public DuplicateReturn GetIsDuplication(bool apply, InventoryItem item)
             {
@@ -5057,6 +5143,7 @@ namespace BaseCharacter
                 {
                     this.maxAmount = 1;
                 }
+                Size = new Vector3(1.4f, 1.4f, 1.4f);
             }
             public T GetItem<T>() where T : Item
             {
@@ -5296,6 +5383,7 @@ namespace BaseCharacter
                 HoldingType = other.HoldingType;
                 MarkedForDeletion = other.MarkedForDeletion;
                 Weight = other.Weight;
+                disposedValue = false;
 
                 // Deep copy the Item based on its type
                 if (other.Item != null)
@@ -5313,7 +5401,14 @@ namespace BaseCharacter
                             Item = new Armor((Armor)other.Item);
                             break;
                         case ItemType.Empty:
-                            Item = new Item(other.Item.GetName(), ItemType.Empty);
+                            try
+                            {
+                                Item = new Item(other.Item.GetName(), ItemType.Empty);
+                            }
+                            catch
+                            {
+                                Item = new Item("Empty", ItemType.Empty);
+                            }
                             break;
                         default:
                             Item = new Item(other.Item); // Ammo, Itmes, etc... are all just an item.
@@ -5321,7 +5416,7 @@ namespace BaseCharacter
                     }
                 }
 
-                UiIcon = other.UiIcon; // Texture is typically managed by Unity
+                UiIcon = other.UiIcon;
                 Material = other.Material;
             }
             /// <summary>
@@ -5353,6 +5448,20 @@ namespace BaseCharacter
                 {
                     return $"{Amount}";
                 }
+            }
+
+             // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+            ~InventoryItem()
+            {
+                 // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+                 Dispose(disposing: false);
+             }
+
+            public void Dispose()
+            {
+                // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+                Dispose(disposing: true);
+                GC.SuppressFinalize(this);
             }
         }
         /// <summary>
@@ -5593,8 +5702,10 @@ namespace BaseCharacter
     /// <summary>
     /// Used by many storage systems such as <see cref="Player"/>, <see cref="Entities"/> To display inventory UI, you'll need to use <see cref="InvManager"/> to show textures and hotbars.
     /// </summary>
-    public class InventorySystem : IInventorySystem<InventoryItem>
+    public class InventorySystem : IInventorySystem<InventoryItem>, IDisposable
     {
+        private bool disposedValue;
+
         /// <summary>
         /// How many items can you hold
         /// </summary>
@@ -5646,6 +5757,10 @@ namespace BaseCharacter
             /// </summary>
         public void FillNullInventory()
         {
+            for (int i = 0; i < Inventory.Count; i++)
+            {
+                Inventory[i].Dispose();
+            }
             Inventory.Clear();
             // Ensure SizeOfInventory is at least 1
             int actualSize = Mathf.Max(1, SizeOfInventory);
@@ -5671,10 +5786,14 @@ namespace BaseCharacter
             // Remove items from start position to end
             if (start < Inventory.Count)
             {
+                for (int i = start; i < Inventory.Count; i++)
+                {
+                    Inventory[i].Dispose();
+                }
                 Inventory.RemoveRange(start, Inventory.Count - start);
             }
 
-            // New new empty items
+            // Add new empty items
             for (int i = start; i < actualSize; i++)
             {
                 Inventory.Add(new InventoryItem(i));
@@ -5693,7 +5812,7 @@ namespace BaseCharacter
             {
                 throw new ArgumentOutOfRangeException(nameof(id), "Item ID is out of inventory range");
             }
-
+            Inventory[id].Dispose();
             Inventory[id] = new InventoryItem(id);
         }
         /// <summary>
@@ -6075,6 +6194,10 @@ namespace BaseCharacter
             }
             return Inventory[id].GetTheTexture();
         }
+        public int GetAmountOfEmptyItems()
+        {
+            return Inventory.FindAll(invItem => invItem.GetIsEmptyItem()).Count;
+        }
         #endregion
         #region Get Inventory Items
         /// <summary>
@@ -6145,7 +6268,7 @@ namespace BaseCharacter
             return Inventory.Find(item => item.GetName() == name);
         }
         #endregion
-        #region Full Scan
+        #region Full CHECK Scan
         /// <summary>
         /// Check passive data of items.
         /// </summary>
@@ -6155,6 +6278,67 @@ namespace BaseCharacter
             {
                 Inventory[i].GetPassiveData(Inventory);
             }
+        }
+        #endregion
+        #region Throw Item
+        /// <summary>
+        /// Gets the item and then deletes it. Mainly used to throw items
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public InventoryItem ThrowItem(int index, int amount = 1)
+        {
+            if (Inventory[index].Amount > amount)
+            {
+                Inventory[index].Amount -= amount;
+                InventoryItem smallerItem = new(Inventory[index]);
+                smallerItem.Amount = amount;
+                return smallerItem;
+            }
+            //If the value is less than or equil to the amount, then just copy the item and delete it from the inventory.
+            InventoryItem item = new(Inventory[index]);
+            DeleteItem(index);
+            return item;
+        }
+        /// <summary>
+        /// Throws all of your items in one blob
+        /// </summary>
+        /// <param name="index">Which one</param>
+        /// <returns>The item to throw</returns>
+        public InventoryItem ThrowItems(int index)
+        {
+            InventoryItem item = new(Inventory[index]);
+            DeleteItem(index);
+            return item;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects)
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // TODO: set large fields to null
+                disposedValue = true;
+            }
+        }
+
+        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+        // ~InventorySystem()
+        // {
+        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        //     Dispose(disposing: false);
+        // }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
         #endregion
     }
@@ -6949,8 +7133,9 @@ namespace BaseCharacter
         {
             stat.Level = stat.Level + 1;
         }
-        #endregion
 
+
+        #endregion
     }
     public class LevelSys
     {
@@ -7500,6 +7685,11 @@ namespace BaseCharacter
             int currentSceneIndex = SceneManager.GetActiveScene().buildIndex;
             SceneManager.LoadScene(currentSceneIndex);
         }
+        public static float GetRandomNegativePositive(float adj)
+        {
+            return (float)(Mathf.Max((float)adj, 0) * (UnityEngine.Random.value - 0.5f));
+        }
+        
         /// <summary>
         /// Randomize an array
         /// </summary>

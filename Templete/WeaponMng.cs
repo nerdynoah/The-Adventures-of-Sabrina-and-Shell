@@ -4,11 +4,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using static Enums;
 
-[CreateAssetMenu(fileName = "Weapon", menuName = "Game/Templetes")]
+//[CreateAssetMenu(fileName = "Weapon", menuName = "Game/Templetes")]
 public class WeaponTemplete : MonoBehaviour
 {
     [Header("Identity")]
     [SerializeField] Texture icon;
+    [SerializeField] Mesh mesh;
     [SerializeField] private string Name;
     [SerializeField][TextArea(3,8)] private string Description;
     [SerializeField] private int Price;

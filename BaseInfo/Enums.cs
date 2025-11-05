@@ -210,6 +210,12 @@ public class Enums
         /// </summary>
         Incrimented = 2,
     }
+    public enum InventoryAddReturn
+    {
+        NothingToAdd = 1,
+        Sucess = 2,
+        Fail = 4,
+    }
     /// <summary>
     /// The different <see cref="BaseCharacter.Item"/> instantiations and their similar calls
     /// </summary>

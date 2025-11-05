@@ -53,10 +53,13 @@ public class EntityTemplete : MonoBehaviour
     [SerializeField] private bool ApplyAttributesRandomly = false;
     [SerializeField][Range(1, 10001)] private int ApplyAttributesRNGrate = 2500;
     [Header("Sensors")]
-    [SerializeField] private Vision visionBox;
+    [SerializeField] private Vision caughtBox;
+    [SerializeField] private Vision TooCloseBox;
+    [SerializeField] private Vision IdealAttackingRange;
     [SerializeField] private HurtBox hurtBox;
     [SerializeField] private Rigidbody body;
     [Header("Intelligence")]
+    [SerializeField] private EnemyBrain brain;
     [SerializeField] private PathMode DefaultPathMode;
     [SerializeField] private WanderMode wanderMode;
     [SerializeField] private FiveSenses[] inspectionModes = new FiveSenses[Enum.GetValues(typeof(FiveSenses)).Length];
@@ -136,7 +139,8 @@ public class EntityTemplete : MonoBehaviour
                 }
                 if (apply[i].Request == CommandRequest.Knockback)
                 {
-                    body.AddForce(apply[i].Knockback.GetKnockback(player.Weight));
+                    body.AddForce(apply[i].Knockback.GetKnockback(player.Weight, transform.position));
+                    body.AddForce(0,apply[i].Knockback.GetRawKnockback().y,0);
                 }
             }
             hurtBox.ClearQueue();
@@ -166,6 +170,14 @@ public class EntityTemplete : MonoBehaviour
         {
             Destroy(gameObject);
             return;
+        }
+        //Brain();
+    }
+    private void Brain()
+    {
+        if (caughtBox.GetIsColliding())
+        {
+
         }
     }
     private void KeyPress()
@@ -286,7 +298,7 @@ public class EntityTemplete : MonoBehaviour
             body.AddRelativeForce(Rotation, ForceMode.VelocityChange);
             TookDamage = false;
         }
-        body.AddForce(new Vector3(0, Gravity, 0), ForceMode.Acceleration);
+        body.AddRelativeForce(new Vector3(0, Gravity, 0), ForceMode.Acceleration);
         //Debug.Log($"Body.Velocity {body.velocity}");
         player.ApplyStatAdjustments();
     }

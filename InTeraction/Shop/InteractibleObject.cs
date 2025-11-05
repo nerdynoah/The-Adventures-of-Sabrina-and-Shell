@@ -12,7 +12,7 @@ public class BuyableObject : MonoBehaviour
     [SerializeField] TMP_Text desc;
     [SerializeField] Material material;
     [SerializeField] MeshRenderer meshRenderer;
-    private InventoryItem Temp = new InventoryItem(0);
+    private InventoryItem Temp = new(0);
 
     public void Start()
     {

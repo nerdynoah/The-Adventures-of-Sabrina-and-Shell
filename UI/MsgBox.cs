@@ -5,7 +5,9 @@ using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-
+/// <summary>
+/// A message box system which allows for building text.
+/// </summary>
 public class MsgBox : MonoBehaviour
 {
     [Header("Required")]

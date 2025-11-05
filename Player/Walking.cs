@@ -72,11 +72,16 @@ public class Walking : MonoBehaviour
         moveSys = new MovingSystemKeyboard(0.1f,0.6f,0.8f,1.05f,0.38f,0.35f);
         jumpSys = new JumpSystem(3, 1, 0.35f);
         gPound = new GRDPound(1);
-        airMent = new AirMovement(1.285f,0.68f,0.185f);
+        airMent = new AirMovement(1.285f,0.68f,0.28f); //Default air = 0.185f
         int hotbar = 9;
-        int ammo = 20;
-        int armor = 10;
-        int extraItem = 10;
+        int ammo = 18;
+        int shoe = 2;
+        int legs = 2;
+        int chest = 1;
+        int hands = 2;
+        int head = 1;
+        int armor = shoe + legs + chest + hands + head;
+        int extraItem = 0;
         int invoSlots = hotbar + ammo + armor + extraItem;
         try
         {
@@ -110,7 +115,7 @@ public class Walking : MonoBehaviour
             }
             else
             {
-                player = new Player("RPG", "Super cool", 10, 1f, 5000f,30f,1f, invoSlots, 10f);
+                player = new Player("RPG", "Super cool", 20, 1f, 5000f,30f,1f, invoSlots, 10f);
                 (WeaponClass, float)[] resist = new(WeaponClass,float)[Enum.GetValues(typeof(WeaponClass)).Length];
                 for (int i = 0; i < resist.Length; i++)
                 {
@@ -120,13 +125,13 @@ public class Walking : MonoBehaviour
                 player.SetupResistances(resist);
                 player.SetReachRange(3);
                 player.AddMoney(500);
-                player.SetupMovement(40f, 24f, 180f, 1f, 0.4f, 0.97f, 1f);
+                player.SetupMovement(40f, 24f, 100f, 1f, 0.4f, 0.97f, 1f);
             }
         }
         catch (Exception e)
         {
             Debug.LogAssertion($"An error occured whlie reading Save data: {e}");
-            player = new Player("RPG", "Super cool", 10, 1f, 5000f, 30f, 1f, invoSlots, 10f);
+            player = new Player("RPG", "Super cool", 20, 1f, 5000f, 30f, 1f, invoSlots, 10f);
             (WeaponClass, float)[] resist = new (WeaponClass, float)[Enum.GetValues(typeof(WeaponClass)).Length];
             for (int i = 0; i < resist.Length; i++)
             {
@@ -136,10 +141,10 @@ public class Walking : MonoBehaviour
             player.SetupResistances(resist);
             player.SetReachRange(3);
             player.AddMoney(500);
-            player.SetupMovement(40f, 24f, 180f, 1f, 0.4f, 0.92f, 1f);
+            player.SetupMovement(40f, 24f, 100f, 1f, 0.4f, 0.92f, 1f);
         }
         player.SetupHotbar(hotbar, 0);
-        invManager.SetupInventorySize(player.GetInventorySize(), player.GetHotbarSize(), 0, 0.75f, 85f, 4, 0.135f, 50f,0.5f,80f);
+        invManager.SetupInventorySize(player.GetInventorySize(), player.GetHotbarSize(), 0, 0.75f, 85f, 3, 0.135f, 50f,0.5f,80f);
         List<int> hpInfo = player.Health.GetHPInfo();
 
         body = GetComponent<Rigidbody>();
@@ -183,7 +188,9 @@ public class Walking : MonoBehaviour
                 }
                 if (apply[i].Request == CommandRequest.Knockback)
                 {
-                    body.AddForce(apply[i].Knockback.GetKnockback(player.Weight));
+                    body.AddForce(apply[i].Knockback.GetKnockback(player.Weight, transform.position));
+                    body.AddForce(0,apply[i].Knockback.GetRawKnockback().y,0);
+                    //Debug.Log(apply[i].Knockback.GetKnockback(player.Weight, transform.position));
                 }
             }
             hurtBox.ClearQueue();
@@ -225,6 +232,10 @@ public class Walking : MonoBehaviour
             {
                 invManager.RefreshHotbarOnly(player);
             }
+        }
+        if (Input.GetKey(controls.interact))
+        {
+            reaching.AddItems(player);
         }
         if (timeGameDelay < Time.time)
         {
@@ -287,12 +298,15 @@ public class Walking : MonoBehaviour
         {
             Reload(item);
         }
+        if (Input.GetKeyDown(controls.throwItem) && !Input.GetKey(KeyCode.LeftControl)) { ThrowItem(false); }
+        if (Input.GetKeyDown(controls.throwItem) && Input.GetKey(KeyCode.LeftControl)) { ThrowItem(true); }
         HotbarKeys();
         UtilizeInventory();
         ApplyEffects();
         ChatBox();
         Health.SetHP(player.Health.GetHPInfo()[0]);
         //HpBar.HpAdjust(10f,player.GetHPInfo()[0],1f);
+        
     }
     private void ApplyEffects()
     {
@@ -363,6 +377,30 @@ public class Walking : MonoBehaviour
         {
             SaveData.DeleteSave();
         }
+    }
+    private void ThrowItem(bool max)
+    {
+        InventoryItem item;
+        if (max)
+        {
+            item = player.ThrowItems(player.GetHotbarSlot());
+        }
+        else
+        {
+            item = player.ThrowItem(player.GetHotbarSlot());
+        }
+        GameObject objection = Instantiate(new GameObject(),transform.position,transform.rotation);
+        BoxCollider box = objection.AddComponent<BoxCollider>();
+        box.includeLayers = 9;
+        box.size = player.GetInventoryItemCurrentHotbar().Size;
+        objection.AddComponent<MeshFilter>();
+        objection.AddComponent<MeshRenderer>().material = (player.GetInventoryItemCurrentHotbar().GetGenericMaterial());
+        Rigidbody tempbd = objection.AddComponent<Rigidbody>();
+        Blocks blocks = objection.AddComponent<Blocks>();
+        blocks.SetupBox(item, item.Weight * 10);
+        tempbd.freezeRotation = true;
+        
+        tempbd.AddForce(transform.rotation.eulerAngles.normalized * player.GetReach() * 100);
     }
     private void HotbarKeys()
     {
@@ -468,6 +506,7 @@ public class Walking : MonoBehaviour
             swap[0] = (int)pend[0];
             swap[1] = (int)pend[1];
             Debug.Log($"Swapped {pend[0]} & {pend[1]}");
+            player.GetInventoryItem((int)pend[0]).GetIsDuplication(true, player.GetInventoryItem((int)pend[1]));
             // Perform the actual swap
             player.SwapItem(swap[0], swap[1]);
             //Update textures
@@ -501,6 +540,7 @@ public class Walking : MonoBehaviour
         if (item.GetItemType() == ItemType.Weapon)
         {
             Weapon rockTMP = item.GetItem<Weapon>();
+            float speed = Mathf.Abs(body.velocity.x) + Mathf.Abs(body.velocity.y) + Mathf.Abs(body.velocity.z);
             //Debug.Log($"canFire: {rockTMP.GetCanFire(false)} and is standered {rockTMP.WeaponDesign == WeaponDesign.Standered}");
             if (rockTMP.WeaponDesign == WeaponDesign.Standered && rockTMP.GetCanFire(true))
             {
@@ -516,10 +556,9 @@ public class Walking : MonoBehaviour
                     tempBullet.GetComponent<MovingProjectile>().SetupProjectile(projectile, rockTMP.GetWeaponClass(), player.GetName());
                     tempBullet.transform.position = offset;
                     Vector3 direction = (hit.point - offset).normalized;
+                    tempBullet.GetComponent<Rigidbody>().AddForce(speed * direction);
                     tempBullet.GetComponent<Rigidbody>().AddForce(projectile.GetSpeed() * direction);
-                    tempBullet.GetComponent<Rigidbody>().AddForce(Mathf.Abs(body.velocity.magnitude * 2) * direction);
                     tempBullet.GetComponent<Rigidbody>().AddForce(projectile.GetYeet() * new Vector3(0, 1, 0));
-                    
                 }
                 else
                 {
@@ -538,10 +577,9 @@ public class Walking : MonoBehaviour
                         tempBullet.GetComponent<MovingProjectile>().SetupProjectile(projectile,rockTMP.GetWeaponClass(),player.GetName());
                         tempBullet.transform.position = offset;
                         Vector3 direction = (hit.point - offset).normalized;
-                        tempBullet.GetComponent<Rigidbody>().AddForce(body.velocity.magnitude * direction);
+                        tempBullet.GetComponent<Rigidbody>().AddForce(speed * direction);
                         tempBullet.GetComponent<Rigidbody>().AddForce(projectile.GetSpeed() * direction);
                         tempBullet.GetComponent<Rigidbody>().AddForce(projectile.GetYeet() * new Vector3(0, 1, 0));
-                        
                     }
                    
                 }
@@ -618,7 +656,7 @@ public class Walking : MonoBehaviour
             moveSys.HandleKeyInput(MoveStates.None, MovingDirection.Up);
             moveSys.HandleKeyInput(MoveStates.None, MovingDirection.Down);
             moveSys.HandleKeyInput(MoveStates.None, MovingDirection.Left);
-            moveSys.HandleKeyInput(MoveStates.None,MovingDirection.Right);
+            moveSys.HandleKeyInput(MoveStates.None, MovingDirection.Right);
         }
 
     }
@@ -728,7 +766,6 @@ public class Walking : MonoBehaviour
         {
             airMent.DirectionalChangeNoPress(player.GetRotationSpeed(0.33f));
         }
-        
         Vector3 delta = moveSys.GetSimpleMvmDeltas(isGrounded);
         Vector3 direct = movement.GetRotation();
         Vector3 forwardDirection = new Vector3(direct.x, 0, direct.z).normalized;
@@ -741,7 +778,7 @@ public class Walking : MonoBehaviour
         }
         if (Input.GetKey(controls.moveDown))
         {
-            body.velocity = new Vector3(body.velocity.x * 0.996f, body.velocity.y, body.velocity.z * 0.996f);
+            body.velocity = new Vector3(body.velocity.x * 0.98f, body.velocity.y, body.velocity.z * 0.98f);
         }
         Vector3 Speed = Time.fixedDeltaTime * player.GetSpeed() * MoveDirection;
         Vector3 Rotation = airMent.GetDirection(1) * Speed;
