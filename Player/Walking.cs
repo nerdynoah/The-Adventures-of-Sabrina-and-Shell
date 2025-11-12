@@ -72,7 +72,7 @@ public class Walking : MonoBehaviour
         moveSys = new MovingSystemKeyboard(0.1f,0.6f,0.8f,1.05f,0.38f,0.35f);
         jumpSys = new JumpSystem(3, 1, 0.35f);
         gPound = new GRDPound(1);
-        airMent = new AirMovement(1.285f,0.68f,0.28f); //Default air = 0.185f
+        airMent = new AirMovement(1.285f,0.194f,0.186f); //Default air = 0.186f, I put ground at a slightly higher rate to encourge aireal movement.
         int hotbar = 9;
         int ammo = 18;
         int shoe = 2;
@@ -389,18 +389,43 @@ public class Walking : MonoBehaviour
         {
             item = player.ThrowItem(player.GetHotbarSlot());
         }
-        GameObject objection = Instantiate(new GameObject(),transform.position,transform.rotation);
-        BoxCollider box = objection.AddComponent<BoxCollider>();
-        box.includeLayers = 9;
-        box.size = player.GetInventoryItemCurrentHotbar().Size;
-        objection.AddComponent<MeshFilter>();
-        objection.AddComponent<MeshRenderer>().material = (player.GetInventoryItemCurrentHotbar().GetGenericMaterial());
-        Rigidbody tempbd = objection.AddComponent<Rigidbody>();
-        Blocks blocks = objection.AddComponent<Blocks>();
-        blocks.SetupBox(item, item.Weight * 10);
-        tempbd.freezeRotation = true;
+        if (item == null)
+        {
+            return;
+        }
+        GameObject thrownObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        try
+        {
+            if (item.Mesh != null)
+            {
+                thrownObject.GetComponent<MeshFilter>().mesh = item.Mesh;
+            }
+        }
+        catch
+        {
+
+        }
+        thrownObject.name = $"Thrown_{item.GetName()}";
+        thrownObject.transform.SetPositionAndRotation(transform.position, transform.rotation);
+        thrownObject.layer = 9;
         
-        tempbd.AddForce(transform.rotation.eulerAngles.normalized * player.GetReach() * 100);
+        BoxCollider box = thrownObject.AddComponent<BoxCollider>();
+        Rigidbody tempbd = thrownObject.AddComponent<Rigidbody>();
+        Blocks blocks = thrownObject.AddComponent<Blocks>();
+        thrownObject.AddComponent<HurtBox>();
+        box.size = player.GetInventoryItemCurrentHotbar().Size;
+        tempbd.freezeRotation = true;
+        tempbd.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        try
+        {
+            thrownObject.GetComponent<MeshRenderer>().material = (player.GetInventoryItemCurrentHotbar().Material);
+        }
+        catch 
+        {
+            
+        }
+        blocks.SetupBox(item, item.Weight);
+        tempbd.AddForce(transform.rotation.eulerAngles.normalized * player.GetReach() * 100 + body.velocity);
     }
     private void HotbarKeys()
     {
@@ -563,9 +588,6 @@ public class Walking : MonoBehaviour
                 else
                 {
                     Vector2[] pattern = rockTMP.GetBulletPattern();
-                    Vector3 forward = movement.GetRotation();
-                    Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
-                    Vector3 up = Vector3.Cross(forward, right);
                     Debug.Log("Making bullets");
                     for (int i = 0; i < pattern.Length; i++)
                     {
@@ -768,9 +790,9 @@ public class Walking : MonoBehaviour
         }
         Vector3 delta = moveSys.GetSimpleMvmDeltas(isGrounded);
         Vector3 direct = movement.GetRotation();
-        Vector3 forwardDirection = new Vector3(direct.x, 0, direct.z).normalized;
+        //Vector3 forwardDirection = new Vector3(direct.x, 0, direct.z).normalized;
         Vector3 MoveDirection = direct * delta.z + Quaternion.Euler(0, 90, 0) * direct * delta.x;
-        float horizontalMagnitude = new Vector3(body.velocity.x, 0, body.velocity.z).magnitude;
+        //float horizontalMagnitude = new Vector3(body.velocity.x, 0, body.velocity.z).magnitude;
         
         if ((Input.GetKey(controls.breaking) || Input.GetKey(controls.breaking2))&& !isGrounded)
         {

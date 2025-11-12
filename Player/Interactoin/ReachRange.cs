@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using static Enums;
+using static UnityEditor.Progress;
 /// <summary>
 /// The reach range for interactions via pressing 'E' in most games.
 /// </summary>
@@ -12,7 +13,7 @@ public class ReachRange : MonoBehaviour
     [SerializeField] private Rigidbody body;
     [SerializeField] private SphereCollider sphereCollider;
     private BuyableObject buyobj;
-    private readonly List<Blocks> item = new List<Blocks>();
+    private readonly List<Blocks> item = new();
     public bool GetItem { get; private set; }
     private float Reach { get; set; }
     private float Interaction { get; set; }
@@ -59,7 +60,7 @@ public class ReachRange : MonoBehaviour
         return null;
     }
 
-    private void OnTriggerStay2D(Collider2D other)
+    private void OnTriggerStay(UnityEngine.Collider other)
     {
         if (other.TryGetComponent(out BuyableObject buy))
         {
@@ -68,7 +69,11 @@ public class ReachRange : MonoBehaviour
         }
         if (other.TryGetComponent(out Blocks inv))
         {
-            item.Add(inv);
+            if (!item.Contains(inv))
+            {
+                item.Add(inv);
+                Debug.Log(inv.GetInventoryItem(false).GetName());
+            }
         }
     }
     /// <summary>
@@ -78,35 +83,66 @@ public class ReachRange : MonoBehaviour
     /// <returns>If returns false, then the inventory was full.</returns>
     public InventoryAddReturn AddItems(InventorySystem inventorySystem)
     {
-        Debug.Log($"Interact Pressed, EmptyItems: {inventorySystem.GetAmountOfEmptyItems()}, Items to add");
-        if (item.Count > 0 && inventorySystem.GetAmountOfEmptyItems() >= item.Count)
+        if (item.Count == 0)
+            return InventoryAddReturn.NothingToAdd;
+
+        Debug.Log($"Interact Pressed, EmptyItems: {inventorySystem.GetAmountOfEmptyItems()}, Items in range: {item.Count}");
+
+        int itemsAdded = 0;
+        int emptySlots = inventorySystem.GetAmountOfEmptyItems();
+
+        // Check if we have enough space for all items
+        if (emptySlots >= item.Count)
         {
-            foreach (Blocks item in item)
+            // Add all items
+            for (int i = item.Count - 1; i >= 0; i--)
             {
-                inventorySystem.AddItem(item.GetInventoryItem(true));
+                if (item[i] != null)
+                {
+                    InventoryItem inventoryItem = item[i].GetInventoryItem(true);
+                    if (inventoryItem != null)
+                    {
+                        if (inventorySystem.AddItem(inventoryItem))
+                        {
+                            itemsAdded++;
+                        }
+                    }
+                }
             }
             item.Clear();
-            return InventoryAddReturn.Sucess;
+            return itemsAdded > 0 ? InventoryAddReturn.Sucess : InventoryAddReturn.Fail;
         }
-        if (item.Count > 0 && inventorySystem.GetAmountOfEmptyItems() < item.Count)
+        else
         {
-            for (int i = 0; i < item.Count; i++)
+            // Partial add - fill available slots
+            for (int i = item.Count - 1; i >= 0 && emptySlots > 0; i--)
             {
-                if (!inventorySystem.AddItem(item[i].GetInventoryItem(true)))
+                if (item[i] != null)
                 {
-                    return InventoryAddReturn.Fail;
+                    InventoryItem inventoryItem = item[i].GetInventoryItem(true);
+                    if (inventoryItem != null)
+                    {
+                        if (inventorySystem.AddItem(inventoryItem))
+                        {
+                            item.RemoveAt(i);
+                            itemsAdded++;
+                            emptySlots--;
+                        }
+                    }
                 }
-                item.RemoveAt(i);
             }
+            return itemsAdded > 0 ? InventoryAddReturn.Sucess : InventoryAddReturn.Fail;
         }
-        return InventoryAddReturn.NothingToAdd;
     }
 
-    private void OnTriggerExit2D(Collider2D other)
+    private void OnTriggerExit(UnityEngine.Collider other)
     {
         buyobj = null;
         TagName = null;
-        item.Remove(other.GetComponent<Blocks>());
+        if (other.TryGetComponent(out Blocks block))
+        {
+            item.Remove(block);
+        }
     }
 
 

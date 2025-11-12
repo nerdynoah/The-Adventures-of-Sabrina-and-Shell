@@ -9,7 +9,7 @@ public class Blocks : MonoBehaviour
 {
     private Rigidbody body;
     private HurtBox hurtBox;
-    [SerializeField] private InventoryItem item;
+    private InventoryItem item;
     private readonly float GAMEDELAY = 0.025f;
     private float delay = 0;
     private bool toDestory = false;
@@ -25,12 +25,11 @@ public class Blocks : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (delay > Time.time)
-        {
-            GetHurtBoxData();
-        }
-        
+        GetHurtBoxData();
     }
+    /// <summary>
+    /// Get knockback data.
+    /// </summary>
     private void GetHurtBoxData()
     {
         if (Time.time > delay)
@@ -42,17 +41,23 @@ public class Blocks : MonoBehaviour
                 {
                     if (apply[i].Request == CommandRequest.Knockback)
                     {
-                        body.AddForce(apply[i].Knockback.GetKnockback(weight, transform.position));
+                        //body.AddForce(apply[i].Knockback.GetKnockback(weight * 1000, transform.position));
                     }
                 }
                 hurtBox.ClearQueue();
             }
+            delay = Time.time + GAMEDELAY;
         }
     }
+    /// <summary>
+    /// Setup box during summoning to set mass and give its item data.
+    /// </summary>
+    /// <param name="item"></param>
+    /// <param name="Weight"></param>
     public void SetupBox(InventoryItem item, float Weight)
     {
         this.item = item;
-        this.Weight = Mathf.Max(Weight,1);
+        this.Weight = Mathf.Max(Weight,10);
         try
         {
             body.mass = Weight;
@@ -67,6 +72,7 @@ public class Blocks : MonoBehaviour
     }
     public InventoryItem GetInventoryItem(bool destoryItem)
     {
+        Debug.Log($"Getting item: {item.GetName()}");
         if (!toDestory)
         {
             if (destoryItem)

@@ -347,7 +347,10 @@ public class AllLibary : MonoBehaviour
         libary.AddQuest(mrFaceClear);
         libary.AddQuest(finalBoss);
     }
-    private void SetupAttributes()
+    /// <summary>
+    /// Its easier to write each effect with code
+    /// </summary>
+    private void SetupAttributes() //I found it easier to create attributes in code since its only 1 string, 1 enumorator, and 3 floats.
     {
         //Single Level Effects
         libary.AddAttribute(new AttributesTemplete("Speed Boost Fire", Attributes.Speed, 1.15f, 10f, 0));

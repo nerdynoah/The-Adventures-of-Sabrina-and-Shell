@@ -10,6 +10,7 @@ public class WeaponTemplete : MonoBehaviour
     [Header("Identity")]
     [SerializeField] Texture icon;
     [SerializeField] Mesh mesh;
+    [SerializeField] Material material;
     [SerializeField] private string Name;
     [SerializeField][TextArea(3,8)] private string Description;
     [SerializeField] private int Price;
@@ -20,7 +21,7 @@ public class WeaponTemplete : MonoBehaviour
     [Tooltip("Leave the Aim value above 20 to ensure when players level up, weapons don't become perfectly accurate. Every 10 Levels gives 4 AIM points")]
     [SerializeField] private float Aim;
     [SerializeField][Min(0)] private float AttackDelay;
-    [SerializeField][Min(1)] private int SizeInInventory;
+    [SerializeField] private int SizeOfObject;
     [SerializeField][Min(0)] private int StackableAmount = 0;
     [Header("Holdable Magazene")]
     [SerializeField] private bool UsesAmmo = true;
@@ -80,6 +81,6 @@ public class WeaponTemplete : MonoBehaviour
         {
             type = HoldingType.Single;
         }
-        return new InventoryItem(Init(), type, SizeInInventory, Price, Weight, icon,StackableAmount);
+        return new InventoryItem(Init(), type, SizeOfObject, Price, Weight, icon, mesh, material, StackableAmount);
     }
 }

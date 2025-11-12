@@ -7,9 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Animations;
 using UnityEngine.SceneManagement;
 using static Enums;
 
@@ -2507,7 +2505,7 @@ namespace BaseCharacter
             /// </summary>
             /// <param name="maxSpeed">Max speed increase in the air. Default = 1.3</param>
             /// <param name="groundDrag">Drag on the ground, Default = 0.65</param>
-            /// <param name="airDrag">Drag on the air Default = 0.2</param>
+            /// <param name="airDrag">Drag on the air Default = 0.186</param>
             public AirMovement(float maxSpeed, float groundDrag, float airDrag)
             {
                 DirPow = 0;
@@ -3277,6 +3275,23 @@ namespace BaseCharacter
                 Damage = damage;
                 Attributes.AddRange(attributes);
             }
+            /// <summary>
+            /// Create a projectile 
+            /// </summary>
+            /// <param name="gravity"></param>
+            /// <param name="yeet"></param>
+            /// <param name="speed"></param>
+            /// <param name="liveTime"></param>
+            /// <param name="piercing"></param>
+            /// <param name="size"></param>
+            /// <param name="weight"></param>
+            /// <param name="damage"></param>
+            /// <param name="minDist"></param>
+            /// <param name="maxDist"></param>
+            /// <param name="minPercent"></param>
+            /// <param name="knockback"></param>
+            /// <param name="sphereicalObject"></param>
+            /// <param name="attributes"></param>
             public Projectile(float gravity, float yeet, float speed, float liveTime, int piercing, float size, float weight, float damage, float minDist, float maxDist, float minPercent, Vector3 knockback, GameObject sphereicalObject, params string[] attributes) : this(gravity, yeet, speed, liveTime, piercing, size, weight, damage, knockback, sphereicalObject, attributes)
             {
                 SetFallOff(minDist, maxDist, minPercent);
@@ -4870,9 +4885,9 @@ namespace BaseCharacter
         /// <summary>
         /// Used in <see cref="InventorySystem"/> as a list to create an inventory system. Stores the following data:
         /// <list type="bullet">
-        /// <item>Stores <see cref="Items.Item"/> and its instantations (i.e: <see cref="Weapon"/>, <see cref="Armor"/></item>
-        /// <item>SlotID, Name, Desc, Price, Size, Texture</item>
-        /// <item>Can be declared Empty (replacable) in <see cref="InventorySystem"/></item>
+        /// <item>Stores <see cref="Items.Item"/> and its instantations (i.e: <see cref="Weapon"/>, <see cref="Armor"/>, <see cref="Blocks"/>)</item>
+        /// <item>SlotID, Name, Desc, Price, Size, Texture, Weight</item>
+        /// <item>Can be declared Empty (replacable) in <see cref="InventoryItem(int)"/></item>
         /// </list>
         /// </summary>
         public class InventoryItem : INameDesc, IInvetorySystemCompability, IDisposable
@@ -4889,6 +4904,10 @@ namespace BaseCharacter
             /// Can you hold multiple of said item.
             /// </summary>
             public HoldingType HoldingType { get; protected set; } = HoldingType.UnlmintedStackable;
+            /// <summary>
+            /// Get: Returns how many of the item your holding. If it is delared as a "Single" item, then this will return one. <br></br><br></br>
+            /// Set: Sets the amount, if set to UnlimintedStackable, you can add up to a 32bit int limit, if set to LimitedStackable, you can store as many as the <see cref="maxAmount"/>. If set to single, will always set the value to one.
+            /// </summary>
             public int Amount
             {
                 get
@@ -4939,6 +4958,9 @@ namespace BaseCharacter
             /// Size in real life
             /// </summary>
             public Vector3 Size { get; protected set; } = new Vector3(1,1,1);
+            /// <summary>
+            /// The data being held for the inventoryItem's usability. <see cref="Weapon"></see> and such
+            /// </summary>
             protected Item Item { get; set; }
             /// <summary>
             /// The Item Type.
@@ -4948,7 +4970,14 @@ namespace BaseCharacter
             /// The UIIcon of the item
             /// </summary>
             protected Texture UiIcon { get; set; } = null;
-            protected Material Material { get; set; } = null;
+            /// <summary>
+            /// Material of the object when in a 3D space.
+            /// </summary>
+            public Material Material { get; protected set; } = null;
+            /// <summary>
+            /// Mesh of the object when in a 3D space.
+            /// </summary>
+            public Mesh Mesh { get; protected set; } = null;
             /// <summary>
             /// Is the item a "empty" item to be replaced/disposed of when a new item enters the inventory.
             /// </summary>
@@ -4975,9 +5004,16 @@ namespace BaseCharacter
                     UiIcon = null;
                     Material = null;
                     Item = null;
+                    Mesh = null;
 
                     disposedValue = true;
                 }
+            }
+            public void Set3D(Mesh mesh, Material material, Vector3 size)
+            {
+                Mesh = mesh;
+                Material = material;
+                Size = size;
             }
             /// <summary>
             /// Setup the InventoryItem with a weapon.
@@ -4999,6 +5035,28 @@ namespace BaseCharacter
                 Price = price;
                 HoldingType = hold;
                 Weight = weight;
+                if (HoldingType == HoldingType.LimitedStackable)
+                {
+                    this.maxAmount = maxAmount;
+                }
+                if (HoldingType == HoldingType.Single)
+                {
+                    this.maxAmount = 1;
+                }
+                Debug.Log($"Holding type: {HoldingType}");
+            }
+            public InventoryItem(Weapon item, HoldingType hold, int size, int price, float weight, Texture uiIcon, Mesh mesh, Material mat, Vector3 physicalSize, int maxAmount = 1)
+            {
+                Name = item.GetName();
+                Description = item.GetDesc();
+                SizeOfObject = size;
+                Item = item;
+                ItemType = item.GetItemType();
+                UiIcon = uiIcon;
+                Price = price;
+                HoldingType = hold;
+                Weight = weight;
+                Set3D(mesh, mat, physicalSize);
                 if (HoldingType == HoldingType.LimitedStackable)
                 {
                     this.maxAmount = maxAmount;
@@ -5067,7 +5125,37 @@ namespace BaseCharacter
                     this.maxAmount = 1;
                 }
                 Debug.Log($"Holding type: {HoldingType}");
-                Size = new Vector3(0.88f, 0.88f, 0.88f);
+                //Size = new Vector3(0.88f, 0.88f, 0.88f);
+            }
+            /// <summary>
+            /// Setup the InventoryItem to have a Item object
+            /// </summary>
+            /// <param name="item"></param>
+            /// <param name="hold">Holding type</param>
+            /// <param name="size"></param>
+            /// <param name="uiIcon"></param>
+            public InventoryItem(Item item, int size, HoldingType hold, int price, float weight, Texture uiIcon, Mesh mesh, Material mat, Vector3 physicalSize, int maxAmount = 1)
+            {
+                HoldingType = hold;
+                Name = item.GetName();
+                Debug.Log(Name);
+                Description = item.GetDesc();
+                SizeOfObject = size;
+                Item = item;
+                ItemType = item.GetItemType();
+                UiIcon = uiIcon;
+                Price = price;
+                Set3D(mesh, mat, physicalSize); 
+                Weight = weight;
+                if (HoldingType == HoldingType.LimitedStackable)
+                {
+                    this.maxAmount = maxAmount;
+                }
+                if (HoldingType == HoldingType.Single)
+                {
+                    this.maxAmount = 1;
+                }
+                Debug.Log($"Holding type: {HoldingType}");
             }
             public DuplicateReturn GetIsDuplication(bool apply, InventoryItem item)
             {
@@ -5159,14 +5247,6 @@ namespace BaseCharacter
                 try { return Item; }
                 catch { return null; }
             }
-            public void SetGenericMaterial(Material mat)
-            {
-                Material = mat;
-            }
-            public Material GetGenericMaterial()
-            {
-                return Material;
-            }
             /// <summary>
             /// Setup a Empty item which is to be overwritten when nonEmpty inventory item is to join
             /// </summary>
@@ -5180,6 +5260,11 @@ namespace BaseCharacter
                 Price = 0;
                 Weight = 0;
             }
+            /// <summary>
+            /// Sets the slot id, although this is not used.
+            /// </summary>
+            /// <param name="id"></param>
+            [Obsolete("Outdated way to find and get items", false)]
             public void SetSlotId(int id)
             {
                 SlotID = id;
@@ -5418,6 +5503,8 @@ namespace BaseCharacter
 
                 UiIcon = other.UiIcon;
                 Material = other.Material;
+                Mesh = other.Mesh;
+
             }
             /// <summary>
             /// Get how many you can hold
@@ -6499,7 +6586,7 @@ namespace BaseCharacter
         {
             get
             {
-                return Mathf.Min(Health.Level, SpeedBase.Level, JumpBase.Level, VisionBase.Level, GroundPoundBase.Level, Aim.Level);
+                return level;
             }
             protected set
             {
@@ -6868,20 +6955,13 @@ namespace BaseCharacter
             return Reach;
         }
         #endregion
+        #region Animation
         public AnimationSys? GetAnimation(int id)
         {
-            if (Inventory[id].GetItemType() == ItemType.Weapon || Inventory[id].GetItemType() == ItemType.Melee)
-            {
-                AnimationSys? clssy = Inventory[id].GetItem<Weapon>().GetAnimationClass();
-                return clssy;
-            }
-            else if (Inventory[id].GetItemType() == ItemType.Item)
-            {
-                AnimationSys? clssy = Inventory[id].GetItem().GetAnimationClass();
-                return clssy;
-            }
-            return null;
+            AnimationSys? clssy = Inventory[id].GetItem().GetAnimationClass();
+            return clssy;
         }
+        #endregion
         #region Attributes
         /// <summary>
         /// The main Attribute applyer.

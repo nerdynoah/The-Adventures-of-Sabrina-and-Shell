@@ -19,7 +19,7 @@ public static class SaveData
         float extra = 0;
         List<string> inventory = new();
         List<int> amount = new();
-        List<Effects> effects = new List<Effects>();
+        //List<Effects> effects = new List<Effects>();
         for (int i = 0; i < player.GetInventorySize(); i++)
         {
             inventory.Add(player.GetInventoryItem(i).GetName());
