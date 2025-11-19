@@ -16,6 +16,7 @@ public class WeaponTemplete : MonoBehaviour
     [SerializeField] private int Price;
     [SerializeField] private float Weight = 100f;
     [SerializeField] private WeaponDesign design;
+    [SerializeField] private Vector3 sizing;
     [Header("Stats")]
     [SerializeField] private float Damage;
     [Tooltip("Leave the Aim value above 20 to ensure when players level up, weapons don't become perfectly accurate. Every 10 Levels gives 4 AIM points")]
@@ -81,6 +82,6 @@ public class WeaponTemplete : MonoBehaviour
         {
             type = HoldingType.Single;
         }
-        return new InventoryItem(Init(), type, SizeOfObject, Price, Weight, icon, mesh, material, StackableAmount);
+        return new InventoryItem(Init(), type, SizeOfObject, Price, Weight, icon, mesh, material, sizing, StackableAmount);
     }
 }

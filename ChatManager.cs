@@ -2,7 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
-
+/// <summary>
+/// A chat manager which you can enter data.
+/// </summary>
 public class ChatManager : MonoBehaviour
 {
     [SerializeField] MsgBox Output;
