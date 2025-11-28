@@ -13,8 +13,7 @@ public class Blocks : MonoBehaviour
     private readonly float GAMEDELAY = 0.025f;
     private float delay = 0;
     private bool toDestory = false;
-    private float Weight { get { return weight; } set { try { body.mass = value; } catch { } weight = value; } }
-    private float weight;
+    public float Weight { get; private set; }
     // Start is called before the first frame update
     void Start()
     {
@@ -57,15 +56,15 @@ public class Blocks : MonoBehaviour
     public void SetupBox(InventoryItem item, float Weight)
     {
         this.item = item;
-        this.Weight = Mathf.Max(Weight,10);
+        this.Weight = Weight;
         try
         {
-            body.mass = Weight;
+            body.mass = Mathf.Max(Weight * 10, 10);
         }
         catch (System.Exception e)
         {
             body = GetComponent<Rigidbody>();
-            body.mass = Weight;
+            body.mass = Mathf.Max(Weight * 10, 10); 
             Debug.LogWarning(e);
         }
         

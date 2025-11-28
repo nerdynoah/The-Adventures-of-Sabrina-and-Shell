@@ -88,9 +88,10 @@ namespace BaseCharacter
         public bool GetName(string name);
         public bool GetDesc(string name);
     }
-    public interface IMovement
+    public interface IKnockback
     {
-
+        public Vector3 GetRawKnockback();
+        public Vector3 GetKnockback(float entityWeight, Vector3 entityPosition);
     }
     public static class SlashRegex
     {
@@ -2374,7 +2375,7 @@ namespace BaseCharacter
         /// <summary>
         /// Knockback calcultaion to make weight feel powerfull. 
         /// </summary>
-        public struct ForceKnockback
+        public struct ForceKnockback : IKnockback
         {
             /// <summary>
             /// Knockback direction
@@ -5467,7 +5468,7 @@ namespace BaseCharacter
                 IsCharging = other.IsCharging;
                 HoldingType = other.HoldingType;
                 MarkedForDeletion = other.MarkedForDeletion;
-                Weight = other.Weight;
+                weight = other.weight;
                 disposedValue = false;
 
                 // Deep copy the Item based on its type
