@@ -1,4 +1,5 @@
 using BaseCharacter;
+using BaseCharacter.Entities;
 using BaseCharacter.Items;
 using System;
 using System.Collections.Generic;
@@ -6,7 +7,6 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using static Enums;
-//TODO: New Projectiles and Projectile Templetes
 /// <summary>
 /// Holds premade <see cref="WeaponTemplete"/>, <see cref="Quest"/>, <see cref="Entities"/>, <see cref="AttributesTemplete"></see>. Use to add your own abilities, roles, etc...
 /// </summary>
@@ -19,11 +19,12 @@ public class AllLibary : MonoBehaviour
     [SerializeField] private WeaponTemplete[] weaponTempletes;
     [SerializeField] private AmmoTemplete[] ammoTempletes;
     [SerializeField] private EntityTemplete[] entityTempletes;
+    [SerializeField] private CharacterTemplete[] characterTempletes;
 
     /// <summary>
-    /// Stores lists of <see cref="InventoryItem"/>, <see cref="AttributesTemplete"/>, <see cref="Quest"/>, <see cref="Entities"/>, 
+    /// Stores Dictionaries of <see cref="InventoryItem"/>, <see cref="AttributesTemplete"/>, <see cref="Quest"/>, <see cref="Character"/>, 
     /// </summary>
-    public class Libary
+    private class Libary
     {
         /// <summary>
         /// A list of weaponsTemplete files
@@ -32,6 +33,7 @@ public class AllLibary : MonoBehaviour
         private List<Quest> Quests { get; set; } = new List<Quest>();
         private Dictionary<string, EntityTemplete> Entities { get; set; } = new Dictionary<string, EntityTemplete>();
         private Dictionary<string, AttributesTemplete> Attributes { get; set; } = new Dictionary<string, AttributesTemplete>();
+        private Dictionary<string, Character> Persons { get; set; } = new Dictionary<string, Character>(); 
         /// <summary>
         /// New <see cref="InventoryItem"/> object to a searchable libary.
         /// </summary>
@@ -47,8 +49,8 @@ public class AllLibary : MonoBehaviour
                 Debug.LogWarning("Attempted to add null InventoryItem");
                 return;
             }
-
-            string itemName = item.GetName();
+            
+            string itemName = item.GetName().ToLower().Trim(Methods.charsToTrim);
             if (string.IsNullOrEmpty(itemName))
             {
                 Debug.LogWarning("Attempted to add InventoryItem with null or empty name");
@@ -57,12 +59,45 @@ public class AllLibary : MonoBehaviour
 
             if (Inventory.ContainsKey(itemName))
             {
-                Debug.LogWarning($"Already found a object named {itemName}");
+                Debug.LogWarning($"Already found a object named {itemName}. Names are always lowercased");
                 return;
             }
 
             Debug.Log($"Adding Item {itemName}");
             Inventory.Add(itemName, item);
+        }
+        public void AddCharacter(params Character[] items)
+        {
+            if (items == null) return;
+
+            foreach (var item in items)
+            {
+                AddCharacter(item);
+            }
+        }
+        public void AddCharacter(Character item)
+        {
+            if (item == null)
+            {
+                Debug.LogWarning("Attempted to add null InventoryItem");
+                return;
+            }
+
+            string itemName = item.GetName().ToLower().Trim(Methods.charsToTrim);
+            if (string.IsNullOrEmpty(itemName))
+            {
+                Debug.LogWarning("Attempted to add InventoryItem with null or empty name");
+                return;
+            }
+
+            if (Inventory.ContainsKey(itemName))
+            {
+                Debug.LogWarning($"Already found a object named {itemName}. Names are always lowercased");
+                return;
+            }
+
+            Debug.Log($"Adding Item {itemName}");
+            Persons.Add(itemName, item);
         }
         public void AddInventoryItem(params InventoryItem[] items)
         {
@@ -93,7 +128,7 @@ public class AllLibary : MonoBehaviour
                 return;
             }
 
-            string entityName = entity.GetName();
+            string entityName = entity.GetName().ToLower().Trim(Methods.charsToTrim);
             if (string.IsNullOrEmpty(entityName))
             {
                 Debug.LogWarning("Attempted to add EntityTemplete with null or empty name");
@@ -116,7 +151,7 @@ public class AllLibary : MonoBehaviour
                 return;
             }
 
-            string attributeName = value.GetName();
+            string attributeName = value.GetName().ToLower().Trim(Methods.charsToTrim);
             if (string.IsNullOrEmpty(attributeName))
             {
                 Debug.LogWarning("Attempted to add AttributesTemplete with null or empty name");
@@ -145,6 +180,7 @@ public class AllLibary : MonoBehaviour
         /// <returns></returns>
         public AttributesTemplete GetAttribute(string name)
         {
+            name = name.ToLower().Trim(Methods.charsToTrim);
             if (string.IsNullOrEmpty(name) || !Attributes.ContainsKey(name))
             {
                 Debug.LogWarning($"Attribute '{name}' not found in library");
@@ -159,19 +195,45 @@ public class AllLibary : MonoBehaviour
         /// <returns>WeaponTemplete</returns>
         public InventoryItem GetInventoryItem(string name)
         {
+            name = name.ToLower().Trim(Methods.charsToTrim);
             if (string.IsNullOrEmpty(name) || !Inventory.ContainsKey(name))
             {
                 Debug.LogWarning($"InventoryItem '{name}' not found in library");
                 return null;
             }
 
-            var item = Inventory[name];
+            InventoryItem item = Inventory[name];
             Debug.Log($"Getting inventoryItem by {name} -> {item?.GetName()}");
+            return item;
+        }
+        public Character GetCharacter(string name)
+        {
+            name = name.ToLower().Trim(Methods.charsToTrim);
+            if (string.IsNullOrEmpty(name) || !Persons.ContainsKey(name))
+            {
+                Debug.LogWarning($"Character '{name}' not found in library");
+                return null;
+            }
+
+            Character item = Persons[name];
+            Debug.Log($"Getting Character by {name} -> {item?.GetName()}");
             return item;
         }
         public List<string> GetInventoryItemNames() => Inventory.Keys.ToList();
         public List<string> GetEffectNames() => Attributes.Keys.ToList();
         public List<string> GetEntitityNames() => Entities.Keys.ToList();
+        public List<string> GetCharacterNames() => Persons.Keys.ToList();
+        public List<InventoryItem> GetAllItems() 
+        {
+            List<InventoryItem> items = Inventory.Values.ToList();
+            for (int i = 0; i < items.Count; i++)
+            {
+                items[i] = new InventoryItem(items[i]);
+            }
+            return items;
+        }
+        public List<AttributesTemplete> GetAllEffects() => Attributes.Values.ToList();
+        public List<EntityTemplete> GetAllEntites() => Entities.Values.ToList();
 
         public Quest GetQuest(string name)
         {
@@ -202,6 +264,7 @@ public class AllLibary : MonoBehaviour
         }
         public EntityTemplete GetEntities(string name)
         {
+            name = name.ToLower().Trim(Methods.charsToTrim);
             if (string.IsNullOrEmpty(name) || !Entities.ContainsKey(name))
             {
                 Debug.LogWarning($"Entity '{name}' not found in library");
@@ -337,26 +400,16 @@ public class AllLibary : MonoBehaviour
         
     } //Used in 3D games
     */
-
-    private void SetupQuest()
-    {
-        cashCow =  new("Cash out the Cows", "CashCow", 0,50, 20, 0.5f, 8f, 10f, true,"Murder all the cows.\nDiffuculty: Very easy, ");
-        mrFaceClear = new("Clean the Faces", "Face",0,300, 40, 0.5f, 5f, 20f, true, "Destory all of the Mr.Faces.\nDiffuculty: Hard,\nOn completion, you will earn a jetpack.",ItemLibary.SearchLibaryForTemplete("Jetpack"));
-        finalBoss = new("Feet the boss", "Daboss", 1,5000, 100, 1f, 10f, 30f, true, "Murder Mr.Scout\nFinal Boss");
-        libary.AddQuest(cashCow);
-        libary.AddQuest(mrFaceClear);
-        libary.AddQuest(finalBoss);
-    }
     /// <summary>
     /// Its easier to write each effect with code
     /// </summary>
     private void SetupAttributes() //I found it easier to create attributes in code since its only 1 string, 1 enumorator, and 3 floats.
     {
-        //Single Level Effects
+        //Single Level Effect
         libary.AddAttribute(new AttributesTemplete("Speed Boost Fire", Attributes.Speed, 1.15f, 10f, 0));
         libary.AddAttribute(new AttributesTemplete("Speed Boost Sparkle", Attributes.Speed, 2f, 5f, 0));
-        libary.AddAttribute(new AttributesTemplete("Speed Boost 35", Attributes.Speed, 1.35f, 3.2f, -1));
-        libary.AddAttribute(new AttributesTemplete("Speed Boost FlameThrower", Attributes.Speed, 1.01f, 3.5f, 0));
+        libary.AddAttribute(new AttributesTemplete("Speed Boost", Attributes.Speed, 1f, 20f, -1));
+        libary.AddAttribute(new AttributesTemplete("Speed Boost FlameThrower", Attributes.Speed, 1.1f, 3.5f, 0));
         libary.AddAttribute(new AttributesTemplete("Poison Damage 1", Attributes.Poison, 0.1f, 4f, 0.15f));
         libary.AddAttribute(new AttributesTemplete("Poison Damage 2", Attributes.Poison, 0.2f, 5f, 0.12f));
         libary.AddAttribute(new AttributesTemplete("Poison Damage 3", Attributes.Poison, 0.3f, 6f, 0.1f));
@@ -392,7 +445,7 @@ public class AllLibary : MonoBehaviour
         libary.AddAttribute(new AttributesTemplete("Flytation", Attributes.Flytation, 2, 8, 1));
         
 
-        //Multi-Level Effects
+        //Multi-Level Effect
         libary.AddAttribute(new AttributesTemplete("Fire Damage 1", Attributes.Poison, 0.5f, 8f, 1f, "Speed Boost Fire"));
         libary.AddAttribute(new AttributesTemplete("Fire Damage 2", Attributes.Poison, 0.7f, 8f, 0.9f, "Speed Boost Fire"));
         libary.AddAttribute(new AttributesTemplete("Fire Damage FlameThrower", Attributes.Poison, 0.2f, 3f, 0.1f));
@@ -438,6 +491,27 @@ public class AllLibary : MonoBehaviour
                 Debug.LogAssertion($"WeaponTemplete inventoryItem at {i} index is null!!!!");
             }
             libary.AddInventoryItem(weaponTempletes[i].GetItem());
+        }
+    }
+    private void SetupCharacter()
+    {
+        if (characterTempletes == null)
+        {
+            Debug.LogAssertion("WeaponTempletes array is null!");
+            return;
+        }
+        for (int i = 0; i < characterTempletes.Length; i++)
+        {
+            if (characterTempletes[i] == null)
+            {
+                Debug.LogAssertion($"WeaponTemplate at index {i} is null!");
+                continue;
+            }
+            if (characterTempletes[i].Character == null)
+            {
+                Debug.LogAssertion($"WeaponTemplete inventoryItem at {i} index is null!!!!");
+            }
+            libary.AddCharacter(characterTempletes[i].Character);
         }
     }
     private void SetupEntities()
@@ -569,12 +643,29 @@ public class AllLibary : MonoBehaviour
         }
         return work;
     }
+    public Character[] SearchLibaryForCharacter(params string[] name)
+    {
+        Character[] work = new Character[name.Length];
+        for (int i = 0; i < name.Length; i++)
+        {
+            Debug.Log($"Name of object: {name[i]}");
+            Character temp = libary.GetCharacter(name[i]);
+            if (temp != null)
+            {
+                work[i] = temp;
+            }
+        }
+        return work;
+    }
+    public Character SearchLibaryForCharacter(string name)
+    {
+        return libary.GetCharacter(name);
+    }
     public void AddAttribute(params AttributesTemplete[] templetes)
     {
         libary.AddAttribute(templetes);
     }
     public static AllLibary ItemLibary { get; private set; }
-
     private void Awake()
     {
         if (ItemLibary == null)
@@ -586,6 +677,7 @@ public class AllLibary : MonoBehaviour
             SetupItems(); //Run Items
             //Run Quests;
             SetupEntities(); //Run Entities
+            SetupCharacter();
         }
         else
         {
@@ -606,5 +698,8 @@ public class AllLibary : MonoBehaviour
     {
         return libary.GetEntitityNames();
     }
+    public List<InventoryItem> GetAllItems() => libary.GetAllItems();
+    public List<AttributesTemplete> GetAllEffects() => libary.GetAllEffects();
+    public List<EntityTemplete> GetAllEntities() => libary.GetAllEntites();
     #endregion
 }

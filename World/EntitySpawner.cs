@@ -3,8 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using BaseCharacter.Items;
-using static Enums;
 using BaseCharacter;
+using static Enums;
 public class EntitySpawner : MonoBehaviour
 {
     [Header("Setup")]

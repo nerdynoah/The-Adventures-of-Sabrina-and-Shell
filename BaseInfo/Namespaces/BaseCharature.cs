@@ -1,4 +1,5 @@
-using BaseCharacter.Effect;
+using BaseCharacter.Effects;
+using BaseCharacter.Entities;
 using BaseCharacter.Items;
 using BaseCharacter.Movement;
 using BaseCharacter.Stats;
@@ -16,10 +17,10 @@ namespace BaseCharacter
     /// <summary>
     /// Setup wallet methods
     /// </summary>
-    public interface IWallet
+    public interface IWallet : IMoney
     {
-        public void AddMoney(int amount);
-        public int SpendMoney(int amount);
+        public void DepositMoney(int amount);
+        public int WithdrawMoney(int amount);
     }
     /// <summary>
     /// Get money as a int and as a string
@@ -79,7 +80,7 @@ namespace BaseCharacter
         public bool GetIsAlive();
     }
     /// <summary>
-    /// Required methods as many of the <see cref="BaseCharacter.Items"/> require this info.
+    /// Required methods of the <see cref="BaseCharacter.Items"/>.
     /// </summary>
     public interface INameDesc
     {
@@ -87,6 +88,13 @@ namespace BaseCharacter
         public string GetDesc();
         public bool GetName(string name);
         public bool GetDesc(string name);
+    }
+    /// <summary>
+    /// Set Desc
+    /// </summary>
+    public interface INameDescSet : INameDesc
+    {
+        public void SetDescription(string desc);
     }
     public interface IKnockback
     {
@@ -100,14 +108,14 @@ namespace BaseCharacter
         /// <code>
         /// /default #1 @ml
         /// /give item Shotgun
-        /// /give item Shotgun Pistol 2 /Libary Effect Fire_Damage_1 @m
+        /// /give item Shotgun Pistol 2 /Libary Effects Fire_Damage_1 @m
         /// /give item Shotgun Pistol #4 #1
         /// /give effect Fire_Damage_2 @l
         /// /jump #500
         /// /clear @d
         /// </code>
         /// </summary>
-        public static Regex SlashCommands { get; private set; } = new Regex(@"(?<=^|\s)\/(?<command>\w+)(?:\s+(?<params>(?<param>[^\/@#$%&*\-\s]+)(?:(?:\s+|,\s*)(?<param>[^\/@#$%&\-*\s]+))*(?=\s|$))?)?(?:\s*)(?<annotations>(?<annotation>[@#$%&*\-])(?<text>[\w]*)(?:\s*(?<annotation>[@#$%&*\-]+)*(?<text>[\w]+))*)?\b", RegexOptions.Compiled);
+        public static Regex SlashCommands { get; private set; } = new Regex(@"(?<=^|\s)\/(?<command>\w+)(?:\s+(?<params>(?<param>[^\/@#$%&*\-\+\s]+)(?:(?:\s+|,\s*)(?<param>[^\/@#$%&\-*\+\s]+))*(?=\s|$))?)?(?:\s*)(?<annotations>(?<annotation>[@#$%&*\-\+])(?<text>[\w]*)(?:\s*(?<annotation>[@#$%&*\-\+]+)*(?<text>[\w]+))*)?\b", RegexOptions.Compiled);
 
         //public static Regex SlashCommands { get; private set; } = new Regex(@"(?<=^|\s)\/(?<command>\w+)(?:\s+)(?<params>(?<param>[^/@#$%&*\s]+)(?:(?:\s+|,\s*)(?<param>[^/@#$%&*\s]+))*(?=\s|$))?", RegexOptions.Compiled);
         // public static Regex Annotation { get; private set; } = new Regex(@"(?<annotation>[@#$%&*])(?<text>[0-zA-Z]+)\b");
@@ -126,12 +134,14 @@ namespace BaseCharacter
                 switch (match.Groups["command"].Value.ToLower())
                 {
                     case "give":
-                    case "giveto":
-                    case "giving":
+                    case "gi":
+                    case "g":
                     case "giv":
                         regexSearchTypes.Add(RegexSearchType.Give);
                         break;
                     case "copy":
+                    case "co":
+                    case "cp":
                         regexSearchTypes.Add(RegexSearchType.Copy);
                         break;
                     case "w":
@@ -140,18 +150,14 @@ namespace BaseCharacter
                     case "wh":
                     case "whi":
                     case "whisp":
-                    case "whispe":
                         regexSearchTypes.Add(RegexSearchType.Whisper);
                         break;
                     case "default":
+                    case "defaults":
                     case "defaulty":
                     case "defaul":
                     case "defaulting":
                     case "defau":
-                    case "defa":
-                    case "def":
-                    case "de":
-                    case "d":
                         regexSearchTypes.Add(RegexSearchType.Default);
                         break;
                     case "clear":
@@ -163,19 +169,18 @@ namespace BaseCharacter
                     case "create":
                     case "cr":
                     case "cre":
-                    case "crea":
-                    case "creat":
                     case "new":
                         regexSearchTypes.Add(RegexSearchType.New);
                         break;
                     case "jump":
                     case "jum":
+                    case "ju":
+                    case "j":
                         regexSearchTypes.Add(RegexSearchType.Jump);
                         break;
                     case "list":
                     case "lis":
                     case "li":
-                        Debug.Log("Building list");
                         regexSearchTypes.Add(RegexSearchType.List);
                         break;
                     case "help":
@@ -184,17 +189,25 @@ namespace BaseCharacter
                     case "he":
                             regexSearchTypes.Add(RegexSearchType.Help);
                         break;
-                    case "effect":
                     case "attribute":
+                    case "attributes":
                     case "attri":
+                    case "attriffect":
+                    case "attriffects":
+                    case "effects":
+                    case "effecting":
+                    case "effect":
                     case "eff":
-                    case "effec":
-                    case "efect":
+                    case "ef":
+                    case "e":
                         regexSearchTypes.Add(RegexSearchType.AttributeTemplete);
                         break;
                     case "entity":
+                    case "ent":
                     case "enemy":
-                    case "killable":
+                    case "player":
+                    case "play":
+                    case "pl":
                         regexSearchTypes.Add(RegexSearchType.Entities);
                         break;
                     case "it":
@@ -205,11 +218,30 @@ namespace BaseCharacter
                     case "inventoryitem":
                     case "inventory_item":
                     case "inventory":
+                    case "inv":
                     case "armor":
+                    case "i":
+                    case "block":
                         regexSearchTypes.Add(RegexSearchType.InventoryItem);
                         break;
-                    case "Die":
+                    case "die":
                         regexSearchTypes.Add(RegexSearchType.Die);
+                        break;
+                    case "libary":
+                    case "libaryObject":
+                        regexSearchTypes.Add(RegexSearchType.LibaryObjects);
+                        break;
+                    case "max":
+                    case "ma":
+                    case "m":
+                        regexSearchTypes.Add(RegexSearchType.Max);
+                        break;
+                    case "order":
+                    case "orde":
+                    case "ord":
+                    case "or":
+                    case "o":
+                        regexSearchTypes.Add(RegexSearchType.Order);
                         break;
                     default:
                         regexSearchTypes.Add(RegexSearchType.None);
@@ -231,36 +263,31 @@ namespace BaseCharacter
             switch (condition)
             {
                 case "effect":
-                case "attribute":
-                case "attri":
-                case "effec":
-                case "efect":
                 case "eff":
                 case "ef":
+                case "e":
                     return (LibraryObjects.AttributeTemplete);
                 case "entity":
+                case "ent":
                 case "enemy":
-                case "enem":
-                case "ene":
-                case "en":
+                case "player":
+                case "play":
+                case "p":
                     return (LibraryObjects.Entities);
                 case "it":
                 case "ite":
                 case "item":
-                case "weapon":
-                case "consumable":
                 case "inventoryitem":
-                case "inventory_item":
-                case "inventory":
                 case "inv":
-                case "armor":
                 case "i":
                     return (LibraryObjects.InventoryItem);
                 case "quest":
-                case "mission":
-                case "quests":
-                case "missions":
+                case "q":
                     return (LibraryObjects.Quests);
+                case "character":
+                case "char":
+                case "c":
+                    return (LibraryObjects.Character);
                 default:
                     if (!ReturnDefault)
                         return (LibraryObjects.None);
@@ -430,6 +457,7 @@ namespace BaseCharacter
             {
                 helpBlock += $"Command Output:\n" +
                     $"/default #int -int @target\n" +
+                    $"/default clear item" +
                     $"Current defaults: #{DefaultInventoryItemAmount}\n" +
                     $"Desc:\n" +
                     $"@ = target. @m = me, @l = looking at, @d = distance, (i.e @ml)\nIn /give # will give the default amount of items to the target if no amount is specfied.\nIn /jump the # default will cause you to jump by this amount: {DefaultInventoryItemAmount * 10f + 35f}\n";
@@ -448,8 +476,12 @@ namespace BaseCharacter
             if (search == RegexSearchType.Clear)
             {
                 helpBlock += $"Command Output:\n" +
-                    $"/clear @target\n" +
-                    $"Clears the inventory and/or TODO:Effects";
+                    $"/clear i @ml\n" +
+                    $"/clear e @m\n" +
+                    $"/clear q @m\n" +
+                    $"Clears the inventory, effects, and quests\n" +
+                    $"By default: clears inventory\n" +
+                    $"Use /default clear item/effect/quest to alter which gets clearing priority";//TODO: set the default command
                 found = true;
             }
             if (search == RegexSearchType.Help)
@@ -460,7 +492,8 @@ namespace BaseCharacter
                     $"Current usable Annaotations:\n" +
                     $"# Positive number\n" +
                     $"- Negative number\n" +
-                    $"@ Target: (m = Self, l = Looking at, d = distance, C = Closest";
+                    $"@ Target: (m = Self, l = Looking at, d(number) = distance\n" +
+                    $"* All: Used in /give item and /give effect to give all of the items/effect to a entity/player";
                 found = true;
             }
             if (search == RegexSearchType.Give)
@@ -468,13 +501,19 @@ namespace BaseCharacter
                 helpBlock += $"Command Output:\n" +
                     $"/give LibaryObject Name Name etc... FinalNumber #Amount #Amount @target\n" +
                     $"LibaryObject:\n" +
-                    $"Item, Effect, Entity, Quest\n" +
+                    $"Item, Effects, Entity, Quest\n" +
                     $"Example:\n" +
+                    $"/give item Mod_Launcher Rockets 6\n" +
                     $"/give item Shotgun Shells #1 #12 @ml\n" +
-                    $"/give item Rocket Fish 3\n" +
-                    $"/give effect Fire_Damage_2 @c\n" +
+                    $"/give item * /max\n" +
+                    $"/give effect Fire_Damage_2 @d20\n" +
+                    $"/give character Vampire @md100\n" +
+                    $"/give quest test_quest @m\n" +
                     $"Desc:\n" +
-                    $"Gives the target a libary item/effect/etc... Uses # and @ Annotations";
+                    $"Gives the target a libary item/effect/etc... Uses #, @, * Annotations\n" +
+                    $"# = amount of a singular item\n" +
+                    $"@ = who\n"+
+                    $"* to give all items and effects";
                 found = true;
             }
             if (search == RegexSearchType.List)
@@ -482,7 +521,7 @@ namespace BaseCharacter
                 helpBlock += $"Command Output:\n" +
                     $"/list LibaryObject\n" +
                     $"libaryObject:\n" +
-                    $"Item, Effect, Entity, Quest\n" +
+                    $"Item, Effects, Entity, Quest\n" +
                     $"Example:\n" +
                     $"/list items \n" +
                     $"Desc:\n" +
@@ -493,26 +532,55 @@ namespace BaseCharacter
             {
                 helpBlock += $"Holds all of the attributes possible to summon via /commands and custom weapons.\n" +
                     $"Example: /give effect Fire_Damage_2";
+                found = true;
             }
             if (search == RegexSearchType.InventoryItem)
             {
                 helpBlock += $"Anything that can be held in your inventory is a Inventory Item.\n " +
                     $"Shotguns, Shells, Blocks, Armor, building blocks, boots, etc... are all InventoryItems";
+                found = true;
+            }
+            if (search == RegexSearchType.Character)
+            {
+                helpBlock += $"Holds stats and movement for different characters.\n" +
+                    $"Mainly used as the core of a entity/player, however, the indivudal AI/Algorithms that the entity/player has have to be coded in individually\n" +
+                    $"Does not contain a preset inventory";
             }
             if (search == RegexSearchType.Entities)
             {
-                helpBlock += $"All entities and players are held here. You can use /give to summon them at a position.\n" +
+                helpBlock += $"All entities and players are held here. You can use /summon to summon them at a position.\nYou can also use /give to" +
                     $"Use annotations to determine where it spawns:\n" +
                     $"@l position.\n" +
                     $"@m around self\n" +
                     "@d30 random Location around you\n" +
-                    $"Example: /give entity Zombie @l\n";
+                    $"Example: /summon player Zombie @l\n";
+                found = true;
+            }
+            if (search == RegexSearchType.Max)
+            {
+                helpBlock += $"Maxes out the amount of items in a inventory." +
+                    $"\nUses @ annotations\nExample: /max\n /max @ml\n\n" +
+                    $"Full example using other commands\n" +
+                    $"/give item shells melting_chestplate rockets /m (Fills up the durability of the melting chestplate and maxes out ammo.";
+                found = true;
+            }
+            if (search == RegexSearchType.Switch)
+            {
+                
             }
             if (search == RegexSearchType.New)
             {
                 //TODO: Finsish
             }
             return helpBlock;
+        }
+        public static bool GetAll(string text)
+        {
+            if (text.Contains('*'))
+            {
+                return true;
+            }
+            return false;
         }
         /// <summary>
         /// Check for Attributes, items, and other appriopriate /commands preset in <see cref="SlashRegex"/> <br></br>
@@ -522,13 +590,17 @@ namespace BaseCharacter
         /// <param name="inventorySize">The size of the player's inventory (use to prevent errors)</param>
         /// <param name="attributes">Attributes collected(as a string)</param>
         /// <param name="items">Items collected (as a string)</param>
-        public static void GetChatBoxRegex(string text, int inventorySize, out List<string> attributes, out List<AddItemRequest> items, out List<string> msgData, out bool clear, out float jump)
+        public static void GetChatBoxRegex(string text, int inventorySize, out List<string> attributes, out List<AddItemRequest> items, out List<string> msgData, out bool clear, out float jump, out bool getAllItems, out bool maxInventory, out RegexOrderItems orderBy, out string charact)
         {
             jump = 0;
+            maxInventory = false;
+            getAllItems = false;
             attributes = new List<string>();
             items = new List<AddItemRequest>();
             msgData = new List<string>();
             clear = false;
+            charact = null;
+            orderBy = RegexOrderItems.KeepAsIs;
             List<RegexSearchType> regexSearch = SlashRegex.GetSlashSearchType(text: text, matches: out MatchCollection commands);
             for (int i = 0; i < regexSearch.Count; i++)
             {
@@ -542,7 +614,7 @@ namespace BaseCharacter
                     }
                     if (!foundThing)
                     {
-                        msgData.Add("/default => Set default values, targets, etc...\n/give => give things to target\n/help => Get help on specsific commands (hint: use /help /jump or /help /help)\n/jump => jump\n/new => Create new Attribute\n/list => List all libaryObjects\n/clear => Clear inventory and/or effects");
+                        msgData.Add("/default => Set default values, targets, etc...\n/give => give things to target\n/switch => Switch character ingame or inventory of another player\n/help => Get help on specsific commands (hint: use /help /jump or /help /help)\n/jump => jump\n/new => Create new Attribute\n/list => List all libaryObjects\n/clear => Clear inventory and/or effects\n/max => Maxes out all your items in your inventory\n Use /Help /Command to find out further info.\n");
                     }
                     break;
                 }
@@ -564,7 +636,7 @@ namespace BaseCharacter
                     }
                 }
                 #region Give Command
-                if ((int)regexSearch[i] > 4 && (int)regexSearch[i] < 10)
+                if ((int)regexSearch[i] > 4 && (int)regexSearch[i] < 11)
                 {
                     LibraryObjects which;
                     if ((int)regexSearch[i] == 5)
@@ -575,7 +647,6 @@ namespace BaseCharacter
                     {
                         which = (LibraryObjects)(int)regexSearch[i];
                     }
-
                     List<string> parameters = GetSlashParamStrings(commands[i], 1, commands[i].Groups["param"].Captures.Count);
                     for (int j = 0; j < parameters.Count; j++)
                     {
@@ -587,6 +658,10 @@ namespace BaseCharacter
                     }
                     if (which == LibraryObjects.InventoryItem)
                     {
+                        if (GetAll(text))
+                        {
+                            getAllItems = true;
+                        }
                         var annotationCaptures = commands[i].Groups["annotation"].Captures;
                         var textCaptures = commands[i].Groups["text"].Captures;
                         int annoIndex = 0;
@@ -620,6 +695,10 @@ namespace BaseCharacter
                                 items.Add(new AddItemRequest(parameters[j], lastNumValue));
                             }
                         }
+                    }
+                    if (which == LibraryObjects.Character)
+                    {
+                        charact = parameters[0];
                     }
                     /*
                     if (which == LibraryObjects.InventoryItem)
@@ -758,7 +837,32 @@ namespace BaseCharacter
                         jump = DefaultInventoryItemAmount * 10f + 35f;
                     }
                 }
+                if (regexSearch[i] == RegexSearchType.Max)
+                {
+                    maxInventory = true;
+                }
+                if (regexSearch[i] == RegexSearchType.Order)
+                {
+                    List<string> parameters = GetSlashParamStrings(commands[i], 0, commands[i].Groups["param"].Captures.Count);
+                    if (parameters.Count > 0)
+                    {
+                        orderBy = GetRegexOrder(parameters[0]);
+                    }
+                }
             }
+        }
+        public static RegexOrderItems GetRegexOrder(string parameter)
+        {
+            return parameter switch
+            {
+                "name" or "nam" or "na" or "n" => RegexOrderItems.Name,
+                "type" or "typ" or "ty" or "t" => RegexOrderItems.Type,
+                "price" or "pric" or "pri" or "pr" or "p" => RegexOrderItems.Price,
+                "size" or "siz" or "si" or "s" => RegexOrderItems.Size,
+                "weight" or "weigh" or "weig" or "wei" or "we" or "w" => RegexOrderItems.Weight,
+                "amount" or "amoun" or "amou" or "amo" or "am" or "a" => RegexOrderItems.Amount,
+                _ => RegexOrderItems.KeepAsIs,
+            };
         }
         /// <summary>
         /// Input chat regex / commands, only works with /Default
@@ -860,7 +964,7 @@ namespace BaseCharacter
                 this.intValue = intValue;
             }
         }
-        public struct NameId
+        public record NameId
         {
             public int Id;
             public string Name;
@@ -888,6 +992,7 @@ namespace BaseCharacter
             {
                 ItemToAdd = name;
                 AmountToAdd = add;
+                //Debug.Log(AmountToAdd);
             }
             public readonly InventoryItem GetItem()
             {
@@ -920,7 +1025,7 @@ namespace BaseCharacter
             /// Data saved
             /// </summary>
             public readonly float[] DataFloat;
-            public readonly Effects[] effects;
+            public readonly Effect[] effects;
             public readonly ForceKnockback Knockback;
             /// <summary>
             /// What type of data, (if required)
@@ -1023,7 +1128,7 @@ namespace BaseCharacter
             /// <param name="receive">Who is to get the data</param>
             /// <param name="priority">What is the priority. Losest priority goes first.</param>
             /// <param name="effect">The data</param>
-            public QueueInfo(int receive, string name, int priority, Effects[] effect)
+            public QueueInfo(int receive, string name, int priority, Effect[] effect)
             {
                 toReceive = receive;
                 this.priority = priority;
@@ -1295,7 +1400,7 @@ namespace BaseCharacter
         /// <summary>
         /// Control ALL areal movement in 1 object.
         /// </summary>
-        [Obsolete("Unusable using Unity's force system, ", false)]
+        [Obsolete("Use AirMovement instead. This is Unusable using Unity's force system, ", false)]
         public class AirMove
         {
             /// <summary>
@@ -1662,7 +1767,7 @@ namespace BaseCharacter
                 }
             }
             /// <summary>
-            /// Returns the value of the GroundPound
+            /// Returns the value of the Gpound
             /// </summary>
             /// <param name="bonus">BONUS</param>
             /// <returns>PoundBonus</returns>
@@ -1671,7 +1776,7 @@ namespace BaseCharacter
                 return PoundBonus * bonus;
             }
             /// <summary>
-            /// Use for making the UI version of GroundPound looks nicer
+            /// Use for making the UI version of Gpound looks nicer
             /// </summary>
             /// <returns>PoundBonus</returns>
             public int GetVisualGroundPound(float sub)
@@ -2266,20 +2371,8 @@ namespace BaseCharacter
                 }
                 return 0f;
             }
-            public float GetDelta(AirMovement move)
-            {
-                if (LastMoveState == MoveStates.OnPress)
-                {
-                    return GetSpeedUp() * move.GetDirection(1f);
-                }
-                if (LastMoveState == MoveStates.OnRelease)
-                {
-                    return GetSpeedDown() * move.GetDirection(1f);
-                }
-                return 0f;
-            }
         }
-        public struct JumpSystem
+        public class JumpSystem
         {
             public float ChargeToJump { get; private set; }
             private readonly float ChargeToJumpBase;
@@ -2300,7 +2393,9 @@ namespace BaseCharacter
             /// Instant jumps
             /// </summary>
             /// <param name="jumps">Amount of jumps allowed</param>
-            public JumpSystem(int jumps, int superMurderJumps, float murderJumps = 1f)
+            /// <param name="MurderJumpMultiplyer">Multiplier for jump</param>
+            /// <param name="superMurderJumps">Amount of Murder jumps</param>
+            public JumpSystem(int jumps, int superMurderJumps, float MurderJumpMultiplyer = 1f)
             {
                 Jumps = jumps;
                 instantJump = true;
@@ -2308,13 +2403,13 @@ namespace BaseCharacter
                 ChargeToJumpBase = 0;
                 ChargeBonus = 0;
                 JumpsBase = jumps;
-                MurderJumpsPer = murderJumps;
+                MurderJumpsPer = MurderJumpMultiplyer;
                 murderJumpsBase = superMurderJumps;
                 MurderJumps = superMurderJumps;
             }
             public float Jump(bool isGrounded, MoveStates state)
             {
-                if (JumpsBase > 1)
+                if (JumpsBase >= 1)
                 {
                     float strength = 1;
                     if (instantJump && state == MoveStates.OnPress)
@@ -2367,7 +2462,7 @@ namespace BaseCharacter
                     }
                     return 0;
                 }
-                Debug.Log("Jump failed due to JumpsBase being less than 1.");
+                //Debug.Log("Jump failed due to JumpsBase being less than 1.");
                 return 0;
 
             }
@@ -2375,14 +2470,14 @@ namespace BaseCharacter
         /// <summary>
         /// Knockback calcultaion to make weight feel powerfull. 
         /// </summary>
-        public struct ForceKnockback : IKnockback
+        public readonly struct ForceKnockback : IKnockback
         {
             /// <summary>
             /// Knockback direction
             /// </summary>
-            private Vector3 Knockback { get; set; }
-            private Vector3 EndLocation { get; set; }
-            private float Weight { get; set; }
+            private readonly Vector3 Knockback;
+            private readonly Vector3 SourcePosition;
+            private readonly float Weight;
             /// <summary>
             /// Setup a knockback force.
             /// </summary>
@@ -2392,7 +2487,7 @@ namespace BaseCharacter
             {
                 weight = Mathf.Max(weight, 1);
                 Weight = weight;
-                EndLocation = endLocation;
+                SourcePosition = endLocation;
                 Knockback = knockback;
             }
             /// <summary>
@@ -2403,7 +2498,7 @@ namespace BaseCharacter
             /// <returns>Knockback</returns>
             public readonly Vector3 GetKnockback(float entityWeight, Vector3 entityPosition)
             {
-                Vector3 direction = (entityPosition - EndLocation).normalized;
+                Vector3 direction = (entityPosition - SourcePosition).normalized;
                 Vector3 alignedKnockback = direction * Knockback.magnitude;
                 float weightRatio = Mathf.Pow(Weight / Mathf.Max(entityWeight, 1), 2);
                 Vector3 calculatedKnockback = weightRatio * alignedKnockback;
@@ -2412,21 +2507,26 @@ namespace BaseCharacter
             }
 
             /// <summary>
-            /// Gets the raw knockback direction (for debugging)
+            /// Gets the raw knockback direction
             /// </summary>
-            public readonly Vector3 GetRawKnockback()
+            public readonly Vector3 GetRawKnockback() => Knockback;
+
+            public readonly float GetYKnockback(float entityWeight)
             {
-                return Knockback;
+                float weightRatio = Mathf.Pow(Weight / Mathf.Max(entityWeight, 1), 2);
+                float calculatedKnockback = weightRatio * Knockback.y;
+
+                return calculatedKnockback;
             }
         }
         /// <summary>
         /// Movement System for WASD or whatever you use.
         /// </summary>
-        public struct MovingSystemKeyboard
+        public class MovingSystemKeyboard
         {
-            private readonly Dictionary<MovingDirection, SimpleMvm> movement;
-            private float InAirF;
-            private float InAirS;
+            private readonly SimpleMvm[] movement;
+            private readonly float InAirF;
+            private readonly float InAirS;
             /// <summary>
             /// Create a varibable direction movement system. The size of the keycodes determines the amount of SimpleMvM vars created.
             /// </summary>
@@ -2436,28 +2536,28 @@ namespace BaseCharacter
             /// <param name="boost">How much boost does holding FOWARD give you.</param>
             public MovingSystemKeyboard(float timeMax, float timeDown, float clamp = 0.8f, float boost = 1, float inAirF = 0.45f, float inAirS = 0.15f)
             {
-                movement = new Dictionary<MovingDirection, SimpleMvm>()
+                movement = new SimpleMvm[4]
                 {
-                    { MovingDirection.Up, new SimpleMvm(timeMax, timeDown, clamp, boost) },
-                    { MovingDirection.Down, new SimpleMvm(timeMax, timeDown, clamp, boost) },
-                    { MovingDirection.Right, new SimpleMvm(timeMax, timeDown, clamp,1) },
-                    { MovingDirection.Left, new SimpleMvm(timeMax, timeDown, clamp,1) }
+                    new SimpleMvm(timeMax, timeDown, clamp, boost),
+                    new SimpleMvm(timeMax, timeDown, clamp, boost),
+                    new SimpleMvm(timeMax, timeDown, clamp,1),
+                    new SimpleMvm(timeMax, timeDown, clamp,1) 
                 };
                 InAirF = inAirF;
                 InAirS = inAirS;
             }
             public void HandleKeyInput(MoveStates move, MovingDirection direct)
             {
-                movement[direct].AutoMoveSystem(move);
+                movement[(int)direct].AutoMoveSystem(move);
             }
             /// <summary>
             /// Gets your movement deltas
             /// 
             /// </summary>
             /// <returns>Vector3(foward,0,right)/returns>
-            public readonly Vector3 GetSimpleMvmDeltas(bool isGrounded)
+            public Vector3 GetSimpleMvmDeltas(bool isGrounded)
             {
-                Vector3 delta = new Vector3(movement[MovingDirection.Down].GetDelta() - movement[MovingDirection.Up].GetDelta(), 0, movement[MovingDirection.Right].GetDelta() - movement[MovingDirection.Left].GetDelta());
+                Vector3 delta = new Vector3(movement[(int)MovingDirection.Down].GetDelta() - movement[(int)MovingDirection.Up].GetDelta(), 0, movement[(int)MovingDirection.Right].GetDelta() - movement[(int)MovingDirection.Left].GetDelta());
                 if (!isGrounded)
                 {
                     delta = new Vector3(delta.x * InAirF, 0, delta.z * InAirS);
@@ -2468,12 +2568,12 @@ namespace BaseCharacter
         /// <summary>
         /// Ground pound
         /// </summary>
-        public struct GRDPound
+        public class GRDPound
         {
-            public float Usages { get; private set; }
-            public float BaseUsages { get; private set; }
+            public byte Usages { get; private set; }
+            public byte BaseUsages { get; private set; }
 
-            public GRDPound(float usages)
+            public GRDPound(byte usages)
             {
                 Usages = usages;
                 BaseUsages = usages;
@@ -2495,12 +2595,15 @@ namespace BaseCharacter
         /// <summary>
         /// Create areal acceleartion
         /// </summary>
-        public struct AirMovement
+        public class AirMovement
         {
-            private float DirPow;
+            private float DirPowX;
+            private float DirPowZ;
             private readonly float MaxSpeed;
             public float GroundDrag { get; private set; }
             public float AirDrag { get; private set; }
+            private readonly float defaultPowerX;
+            private readonly float defaultPowerZ;
             /// <summary>
             /// Setup aireal movement and drag.
             /// </summary>
@@ -2509,37 +2612,85 @@ namespace BaseCharacter
             /// <param name="airDrag">Drag on the air Default = 0.186</param>
             public AirMovement(float maxSpeed, float groundDrag, float airDrag)
             {
-                DirPow = 0;
+                DirPowX = 0;
+                DirPowZ = 0;
                 MaxSpeed = maxSpeed;
                 GroundDrag = groundDrag;
                 AirDrag = airDrag;
+                defaultPowerX = 1;
+                defaultPowerZ = 0.01f;
             }
-            public void DirectionalChangeNoPress(float power)
+            /// <summary>
+            /// Setup aireal movement and drag.
+            /// </summary>
+            /// <param name="maxSpeed">Max speed increase in the air. Default = 1.3</param>
+            /// <param name="groundDrag">Drag on the ground, Default = 0.65</param>
+            /// <param name="airDrag">Drag on the air Default = 0.186</param>
+            public AirMovement(float maxSpeed, float groundDrag, float airDrag, float defaultPowerX, float defaultPowerZ)
             {
-                if (DirPow != 0)
+                DirPowX = 0;
+                DirPowZ = 0;
+                MaxSpeed = maxSpeed;
+                GroundDrag = groundDrag;
+                AirDrag = airDrag;
+                this.defaultPowerX = defaultPowerX;
+                this.defaultPowerZ = defaultPowerZ;
+            }
+            public void DirectionalChangeNoPressX(float power)
+            {
+                if (DirPowX != 0)
                 {
-                    float math = Mathf.Abs(DirPow) * power * Time.fixedDeltaTime;
-                    if (DirPow > 0)
+                    float math = Mathf.Abs(DirPowX) * (power*defaultPowerX) * Time.fixedDeltaTime;
+                    if (DirPowX > 0)
                     {
-                        DirPow = Mathf.Max(DirPow - math, 0);
+                        DirPowX = Mathf.Max(DirPowX - math, 0);
                     }
-                    if (DirPow < 0)
+                    if (DirPowX < 0)
                     {
-                        DirPow = Mathf.Min(math, 0);
+                        DirPowX = Mathf.Min(DirPowX + math, 0);
                     }
                 }
             }
-            public void DirectionChangePress(float power)
+            public void DirectionalChangeNoPressZ(float power)
             {
-                DirPow += power * Time.fixedDeltaTime;
-                DirPow = Mathf.Clamp(DirPow, -MaxSpeed, MaxSpeed);
+                if (DirPowZ != 0)
+                {
+                    float math = Mathf.Abs(DirPowX) * (power * defaultPowerZ) * Time.fixedDeltaTime;
+                    if (DirPowZ > 0)
+                    {
+                        DirPowZ = Mathf.Max(DirPowX - math, 0);
+                    }
+                    if (DirPowZ < 0)
+                    {
+                        DirPowZ = Mathf.Min(DirPowX + math, 0);
+                    }
+                }
             }
-            public readonly float GetDirection(float speed)
+            public void DirectionChangePressX(float power)
             {
-                return DirPow * speed;
+                DirPowX += (power * defaultPowerX) * Time.fixedDeltaTime;
+                DirPowX = Mathf.Clamp(DirPowX, -MaxSpeed, MaxSpeed);
+            }
+            public void DirectionChangePressZ(float power)
+            {
+                DirPowZ += (power * defaultPowerZ) * Time.fixedDeltaTime;
+                DirPowZ = Mathf.Clamp(DirPowZ, -MaxSpeed, MaxSpeed);
+            }
+            /// <summary>
+            /// Get AirSpeed values. (item 1 = X, item 2 = Y)
+            /// </summary>
+            /// <param name="speed"></param>
+            /// <returns></returns>
+            public (float,float) GetDirection(float speed)
+            {
+                return ((DirPowX * speed),(DirPowZ * speed));
             }
         }
-        [Obsolete("A failed version of Stamania, May fix in the future", false)]
+        public struct CatchWind
+        {
+
+        }
+        [Obsolete("A failed version of Stamania, May fix in the future. Use the Stamina class instead", false)]
         class SpeedBoost
         {
             private float Boost { get; set; }
@@ -2600,12 +2751,12 @@ namespace BaseCharacter
 
         }
     }
-    namespace Effect
+    namespace Effects
     {
         /// <summary>
-        /// Stores Effects.
+        /// Stores Effect.
         /// </summary>
-        public struct Effects
+        public struct Effect
         {
             public string Name { get; private set; }
             public Attributes Attributes { get; private set; }
@@ -2615,14 +2766,14 @@ namespace BaseCharacter
             private string[] Others { get; set; }
 
             /// <summary>
-            /// Data held in a Effect
+            /// Data held in a Effects
             /// </summary>
             /// <param name="name"></param>
             /// <param name="attributes"></param>
             /// <param name="strength"></param>
             /// <param name="time"></param>
             /// <param name="option"></param>
-            public Effects(string name, Attributes attributes, float strength, float time, float option)
+            public Effect(string name, Attributes attributes, float strength, float time, float option)
             {
                 Name = name;
                 Attributes = attributes;
@@ -2631,7 +2782,7 @@ namespace BaseCharacter
                 Option = option;
                 Others = null;
             }
-            public Effects(string name, Attributes attributes, float strength, float time, float option, params string[] others)
+            public Effect(string name, Attributes attributes, float strength, float time, float option, params string[] others)
             {
                 Name = name;
                 Attributes = attributes;
@@ -2648,6 +2799,91 @@ namespace BaseCharacter
             {
                 return Others;
             }
+            public static bool operator >=(Effect left, Effect right) { return (left.Strength >= right.Strength); }
+            /// <summary>
+            /// Returns true if the strength value of the left is less than or equil to the strength value of the right.
+            /// </summary>
+            /// <param name="left"></param>
+            /// <param name="right"></param>
+            /// <returns></returns>
+            public static bool operator <=(Effect left, Effect right) { return (left.Strength <= right.Strength); }
+            /// <summary>
+            /// Returns true if the strength value of the left is greater than strength value of the right.
+            /// </summary>
+            /// <param name="left"></param>
+            /// <param name="right"></param>
+            /// <returns></returns>
+            public static bool operator <(Effect left, Effect right) { return (left.Strength < right.Strength); }
+            /// <summary>
+            /// Returns true if the strength value of the left is less than strength value of the right.
+            /// </summary>
+            /// <param name="left"></param>
+            /// <param name="right"></param>
+            /// <returns></returns>
+            public static bool operator >(Effect left, Effect right) { return (left.Strength > right.Strength); }
+
+            //The following operator functionalities are used during /give effect functions. (i.e /give effect speed_boost #90).
+            // # = +
+            // - = -
+            // / = /
+            // * = *
+            
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="left"></param>
+            /// <param name="right"></param>
+            /// <returns>Effect strength + <paramref name="right"/></returns>
+            public static float operator +(Effect left, float right) { return left.Strength + right; }
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="left"></param>
+            /// <param name="right"></param>
+            /// <returns><paramref name="left"/> + Effect strength</returns>
+            public static float operator +(float left, Effect right) { return right.Strength + left; }
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="left"></param>
+            /// <param name="right"></param>
+            /// <returns>Effect strength * <paramref name="right"/></returns>
+            public static float operator *(Effect left, float right) { return left.Strength * right; }
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="left"></param>
+            /// <param name="right"></param>
+            /// <returns><paramref name="left"/> * Effect strength</returns>
+            public static float operator *(float left, Effect right) { return left * right.Strength; }
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="left"></param>
+            /// <param name="right"></param>
+            /// <returns>Effect strength * <paramref name="right"/></returns>
+            public static float operator -(Effect left, float right) { return left.Strength - right; }
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="left"></param>
+            /// <param name="right"></param>
+            /// <returns><paramref name="left"/> * Effect strength</returns>
+            public static float operator -(float left, Effect right) { return left - right.Strength; }
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="left"></param>
+            /// <param name="right"></param>
+            /// <returns>Effect strength * <paramref name="right"/></returns>
+            public static float operator /(Effect left, float right) { return left.Strength / right; }
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="left"></param>
+            /// <param name="right"></param>
+            /// <returns><paramref name="left"/> * Effect strength</returns>
+            public static float operator /(float left, Effect right) { return left / right.Strength; }
         }
         /// <summary>
         /// Create fire damage. Fire damage will stack
@@ -3080,6 +3316,7 @@ namespace BaseCharacter
             public void MoveItem(int location);
             public Texture GetTheTexture();
         }
+
         /// <summary>
         /// Create a projectile pathing, explosive sizes, damage falloff, yeeting, etc... to be used in <see cref="Item"/>
         /// </summary>
@@ -3459,12 +3696,13 @@ namespace BaseCharacter
         /// The base item. Used in <see cref="InventoryItem"/>. You'll mainly use an instantiation such as <see cref="Weapon"/>, <see cref="Consumable"/>, <see cref="Armor"/> 
         /// <br></br> All items contain: 
         /// <list type="bullet">
-        /// <item>Names, Desc, Inventory size and <see cref="Projectile"/> stats.</item>
+        /// <item>Names, Desc, and <see cref="Projectile"/> stats.</item>
         /// <item><see cref="ItemType"/> to indicate to the <see cref="InventoryItem"/> on which instantiation to grab.</item>
-        /// <item><see cref="AnimationSys"/>, <see cref="Texture"/>, names of attributes which are located in the <see cref="AllLibary.GetEffectNames()"/>, </item>
+        /// <item><see cref="AnimationSys"/>, <see cref="Texture"/>, and names of attributes which are located in the <see cref="AllLibary.GetEffectNames()"/></item>
         /// </list>
         /// </summary>
-        public class Item : INameDesc, IDisposable
+        /// <!--This could be abstract but some items in the game work with just this class. So I left it not abstract.-->
+        public class Item : INameDescSet, IDisposable
         {
             /// <summary>
             /// Your name
@@ -3475,10 +3713,6 @@ namespace BaseCharacter
             /// </summary>
             protected ItemType itemType;
             protected bool disposedValue;
-            /// <summary>
-            /// ID, I suppose if you wanted to create an item system in a libary based on ID you could use this, otherwise its just pointless. But i'll leave it in for any nerdy ppl.
-            /// </summary>
-            protected int ID { get; set; }
             /// <summary>
             /// Description
             /// </summary>
@@ -3539,10 +3773,6 @@ namespace BaseCharacter
             public bool GetName(string name)
             {
                 return name == GetName();
-            }
-            public int GetID()
-            {
-                return ID;
             }
             public ItemType GetItemType()
             {
@@ -3646,7 +3876,7 @@ namespace BaseCharacter
                     {
                         try
                         {
-                            return new Projectile(Project[0]);
+                            return new Projectile(Project[0]); //If it fails, return the first projectile.
                         }
                         catch
                         {
@@ -3659,7 +3889,7 @@ namespace BaseCharacter
                     Debug.Log($"Trying to get projectile {id}");
                     return (Project[id]);
                 }
-                catch (IndexOutOfRangeException ex) 
+                catch (IndexOutOfRangeException ex)
                 {
                     Debug.LogWarning(ex.Message);
                     try
@@ -3675,7 +3905,9 @@ namespace BaseCharacter
                 }
                 catch (Exception ex)
                 {
+#if false //Use for debugging if a projectile is not working, otherwise this script of code should run.
                     Debug.LogAssertion(ex);
+#endif
                     try
                     {
                         return (Project[0]);
@@ -3737,7 +3969,6 @@ namespace BaseCharacter
                 // Copy primitive types and simple properties
                 Name = other.Name;
                 itemType = other.itemType;
-                ID = other.ID;
                 Desc = other.Desc;
                 IsOn = other.IsOn;
 
@@ -3754,7 +3985,7 @@ namespace BaseCharacter
                 // Deep copy Projectile list
                 Project = other.Project?.Select(p => new Projectile(p)).ToList() ?? new List<Projectile>();
 
-                // Deep copy Effects list
+                // Deep copy Effect list
                 Effects = other.Effects?.ToList() ?? new List<string>();
 
                 // Copy CommandRequests array
@@ -4881,7 +5112,6 @@ namespace BaseCharacter
             {
                 return InitialDelay;
             }
-
         }
         /// <summary>
         /// Used in <see cref="InventorySystem"/> as a list to create an inventory system. Stores the following data:
@@ -4983,11 +5213,10 @@ namespace BaseCharacter
             /// Is the item a "empty" item to be replaced/disposed of when a new item enters the inventory.
             /// </summary>
             protected bool EmptyItem { get; set; }
-            /// <summary>
-            /// Is the weapon Charging?
-            /// </summary>
-            protected bool IsCharging { get; set; }
             public bool MarkedForDeletion { get; protected set; } = false;
+            /// <summary>
+            /// The weight of this item if the amount = 0;
+            /// </summary>
             private float weight;
             private bool disposedValue = false;
 
@@ -5379,14 +5608,6 @@ namespace BaseCharacter
             {
                 return ItemType;
             }
-            public bool GetCharging()
-            {
-                return IsCharging;
-            }
-            public void SetCharge(bool value)
-            {
-                IsCharging = value;
-            }
             /// <summary>
             /// Decrease how much of item is held in this object
             /// </summary>
@@ -5410,7 +5631,7 @@ namespace BaseCharacter
             /// <list type="number">
             /// <item>Item: Nothing</item>
             /// <item>Wewapon: Reload</item>
-            /// <item>Consumable: Conditional Effect</item>
+            /// <item>Consumable: Conditional Effects</item>
             /// </list>
             /// </summary>
             /// <param name="items">Inventory</param>
@@ -5429,7 +5650,7 @@ namespace BaseCharacter
             /// <list type="number">
             /// <item>Item: Nothing</item>
             /// <item>Wewapon: Reload</item>
-            /// <item>Consumable: Conditional Effect</item>
+            /// <item>Consumable: Conditional Effects</item>
             /// </list>
             /// </summary>
             /// <param name="items">Inventory</param>
@@ -5465,7 +5686,6 @@ namespace BaseCharacter
                 Price = other.Price;
                 ItemType = other.ItemType;
                 EmptyItem = other.EmptyItem;
-                IsCharging = other.IsCharging;
                 HoldingType = other.HoldingType;
                 MarkedForDeletion = other.MarkedForDeletion;
                 weight = other.weight;
@@ -5551,6 +5771,725 @@ namespace BaseCharacter
                 Dispose(disposing: true);
                 GC.SuppressFinalize(this);
             }
+        }
+        /// <summary>
+        /// Used by many storage systems such as <see cref="Player"/>, <see cref="Entities"/> To display inventory UI, you'll need to use <see cref="InvManager"/> to show textures and hotbars.
+        /// </summary>
+        public class InventorySystem : IInventorySystem<InventoryItem>, IDisposable
+        {
+            private bool disposedValue;
+
+            /// <summary>
+            /// How many items can you hold
+            /// </summary>
+            protected int SizeOfInventory { get; set; }
+
+            /// <summary>
+            /// The base size of your inventory (without expansions)
+            /// </summary>
+            protected int BaseSizeOfInventory { get; set; }
+
+            /// <summary>
+            /// What you have in your inventory
+            /// </summary>
+            protected List<InventoryItem> Inventory { get; set; } = new List<InventoryItem>();
+
+            /// <summary>
+            /// The selected item used for swapping.
+            /// </summary>
+            protected int PendingItem { get; set; } = -1;
+
+            /// <summary>
+            /// Current Inventory Slot
+            /// </summary>
+            protected int CurrentHotBarSlot { get; set; } = 0;
+
+            /// <summary>
+            /// Hotbar Size.
+            /// </summary>
+            protected int HotbarSize { get; set; } = 6;
+            /// <summary>
+            /// Returns the total weight of all the items.
+            /// </summary>
+            protected float TotalWeight
+            {
+                get
+                {
+                    float weight = 0;
+                    for (int i = 0; i < Inventory.Count; i++)
+                    {
+                        weight += Inventory[i].Weight;
+                    }
+                    return weight;
+                }
+            }
+            #region Fill Null Inventory
+            /// <summary>
+            /// Clear an inventory and then fill it with empty items which can be moved or erased. 
+            /// Used to clear an inventory or to fill a Null inventory.
+            /// </summary>
+            public void FillNullInventory()
+            {
+                for (int i = 0; i < Inventory.Count; i++)
+                {
+                    Inventory[i].Dispose();
+                }
+                Inventory.Clear();
+                // Ensure SizeOfInventory is at least 1
+                int actualSize = Mathf.Max(1, SizeOfInventory);
+                for (int i = 0; i < actualSize; i++)
+                {
+                    Inventory.Add(new InventoryItem(i));
+                }
+            }
+            /// <summary>
+            /// Will clear an inventory starting from <paramref name="start"/>
+            /// </summary>
+            /// <param name="start">Where to begin</param>
+            public void FillNullInventory(int start)
+            {
+                // Ensure SizeOfInventory is at least 1
+                int actualSize = Mathf.Max(1, SizeOfInventory);
+
+                if (start >= actualSize)
+                {
+                    return;
+                }
+
+                // Remove items from start position to end
+                if (start < Inventory.Count)
+                {
+                    for (int i = start; i < Inventory.Count; i++)
+                    {
+                        Inventory[i].Dispose();
+                    }
+                    Inventory.RemoveRange(start, Inventory.Count - start);
+                }
+
+                // Add new empty items
+                for (int i = start; i < actualSize; i++)
+                {
+                    Inventory.Add(new InventoryItem(i));
+                }
+            }
+            #endregion
+            #region Add and Delete Items/Inventory spaces
+            /// <summary>
+            /// Allows you to delete an item and replace it with an empty item.
+            /// </summary>
+            /// <param name="id">The slot at where the Inventory item was removed.</param>
+            /// <exception cref="ArgumentOutOfRangeException">Thrown when id is out of range</exception>
+            public void DeleteItem(int id)
+            {
+                if (id < 0 || id >= Inventory.Count)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(id), "Item ID is out of inventory range");
+                }
+                Inventory[id].Dispose();
+                Inventory[id] = new InventoryItem(id);
+            }
+            /// <summary>
+            /// Checks your entire inventory as to remove items which are <see cref="InventoryItem.MarkedForDeletion"/>
+            /// </summary>
+            public void CheckForDeletion()
+            {
+                for (int i = 0; i < Inventory.Count; i++)
+                {
+                    if (Inventory[i].MarkedForDeletion)
+                    {
+                        DeleteItem(i);
+                    }
+                }
+            }
+            /// <summary>
+            /// Makes inventory bigger and fills the empty spots with empty items
+            /// </summary>
+            /// <param name="add">Number of slots to add</param>
+            public void AddInventorySpaces(int add)
+            {
+                int oldSize = SizeOfInventory;
+                add = Mathf.Max(1, Mathf.Abs(add));
+                SizeOfInventory += add;
+                FillNullInventory(oldSize);
+            }
+            /// <summary>
+            /// Adds an <see cref="InventoryItem"/>to the inventory unless the inventory is full
+            /// </summary>
+            /// <param name="item">The <see cref="InventoryItem"/> to be added</param>
+            /// <param name="start">Where to start the search. This is great when loading from a save file when you need to add spacing between items spawning in the inventory</param>
+            public bool AddItem(InventoryItem item, int start = 0)
+            {
+                if (item == null)
+                {
+                    throw new ArgumentNullException(nameof(item), "Item cannot be null");
+                }
+
+                start = Mathf.Clamp(start, 0, SizeOfInventory - 1);
+
+                // First, try to stack with existing items of the same type
+                for (int i = 0; i < Mathf.Min(SizeOfInventory, Inventory.Count); i++)
+                {
+                    if (!Inventory[i].GetIsEmptyItem())
+                    {
+                        DuplicateReturn output = Inventory[i].GetIsDuplication(true, item);
+
+                        if (output == DuplicateReturn.Incrimented)
+                        {
+                            // Item was partially or fully stacked
+                            if (item.Amount <= 0 || item.MarkedForDeletion)
+                            {
+                                return true; // Item fully consumed
+                            }
+                            // Continue to find space for remaining items
+                            break;
+                        }
+                        else if (output == DuplicateReturn.True)
+                        {
+                            // Items are same type but couldn't stack (non-stackable or full)
+                            // Continue searching for empty slot
+                        }
+                    }
+                }
+
+                // Clean up any marked for deletion items
+                CheckForDeletion();
+
+                // If item still exists and has amount > 0, find empty slot
+                if (item.Amount > 0 && !item.MarkedForDeletion)
+                {
+                    return FindEmptySlotForItem(item, start);
+                }
+
+                return true; // Item was fully stacked
+            }
+            /// <summary>
+            /// Find an empty slot for an item
+            /// </summary>
+            /// <param name="item">Item to add</param>
+            /// <param name="start">Start location for search</param>
+            /// <returns></returns>
+            private bool FindEmptySlotForItem(InventoryItem item, int start)
+            {
+                // Try to find an empty slot from start position
+                for (int i = start; i < SizeOfInventory; i++)
+                {
+                    if (TryPlaceItemInSlot(item, i))
+                        return true;
+                }
+
+                // If not found from start position, search from beginning
+                if (start > 0)
+                {
+                    for (int i = 0; i < start; i++)
+                    {
+                        if (TryPlaceItemInSlot(item, i))
+                            return true;
+                    }
+                }
+
+                Debug.Log("After searching for space in your inventory, we found NOTHING open.");
+                return false;
+            }
+            /// <summary>
+            /// Try to place an item in a slot.
+            /// </summary>
+            /// <param name="item">the item to add</param>
+            /// <param name="slotIndex">Start slot index</param>
+            /// <returns>Was it successfull</returns>
+            private bool TryPlaceItemInSlot(InventoryItem item, int slotIndex)
+            {
+                if (slotIndex < Inventory.Count)
+                {
+                    if (Inventory[slotIndex].GetIsEmptyItem())
+                    {
+                        Inventory[slotIndex] = item;
+                        item.MoveItem(slotIndex);
+                        CheckPhaseItem(slotIndex);
+                        return true;
+                    }
+                }
+                else
+                {
+                    // Expand the inventory list if needed
+                    item.MoveItem(slotIndex);
+                    Inventory.Add(item);
+                    CheckPhaseItem(slotIndex);
+                    return true;
+                }
+
+                return false;
+            }
+            /// <summary>
+            /// Adds multiple <see cref="InventoryItem"/> to the inventory
+            /// </summary>
+            /// <param name="items">Array of items to be added</param>
+            /// <param name="start">Where to start the search</param>
+            /// <returns>True if all items were added successfully</returns>
+            public bool AddItem(InventoryItem[] items, int start = 0)
+            {
+                if (items == null)
+                {
+                    throw new ArgumentNullException(nameof(items), "Items array cannot be null");
+                }
+
+                if (Inventory == null || SizeOfInventory <= 0)
+                {
+                    Debug.LogWarning("Inventory is not properly initialized");
+                    return false;
+                }
+
+                start = Mathf.Clamp(start, 0, SizeOfInventory - 1);
+                bool allItemsAdded = true;
+
+                foreach (InventoryItem currentItem in items)
+                {
+                    if (currentItem == null)
+                    {
+                        Debug.LogWarning("Null item in array, skipping");
+                        continue;
+                    }
+
+                    bool itemAdded = false;
+
+                    // First try to stack with existing items of the same type
+                    for (int i = 0; i < Mathf.Min(SizeOfInventory, Inventory.Count); i++)
+                    {
+                        if (!Inventory[i].GetIsEmptyItem())
+                        {
+                            DuplicateReturn dReturn = Inventory[i].GetIsDuplication(true, currentItem);
+
+                            if (dReturn == DuplicateReturn.Incrimented)
+                            {
+                                // Item was partially or fully stacked
+                                if (currentItem.Amount <= 0 || currentItem.MarkedForDeletion)
+                                {
+                                    itemAdded = true; // Item fully consumed
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // If item wasn't fully consumed by stacking and still exists, find empty slot
+                    if (!itemAdded && currentItem.Amount > 0 && !currentItem.MarkedForDeletion)
+                    {
+                        itemAdded = FindEmptySlotForItem(currentItem, start);
+                    }
+                    else if (currentItem.MarkedForDeletion || currentItem.Amount <= 0)
+                    {
+                        // Item was fully consumed by stacking
+                        itemAdded = true;
+                    }
+
+                    if (!itemAdded)
+                    {
+                        Debug.LogWarning($"Could not find space for item in inventory: {currentItem.GetName()}");
+                        allItemsAdded = false;
+                    }
+
+                    // Clean up after each item addition to free up slots
+                    CheckForDeletion();
+                }
+
+                return allItemsAdded;
+            }
+            /// <summary>
+            /// Run a check that identifiefies which items are usable during the PreGame and PostVoting
+            /// </summary>
+            /// <param name="index"></param>
+            public void CheckPhaseItem(int index)
+            {
+                //TODO: Somthing that uses
+                //ItemType type = Inventory[index].GetItemType();
+            }
+            #endregion
+            #region Order By
+            public void OrderItemsByName()
+            {
+                Inventory = Inventory?.OrderBy(item => item?.GetName() ?? string.Empty).ToList()
+                            ?? new List<InventoryItem>();
+            }
+            public void OrderItemsByItemType(ItemType itemType)
+            {
+                /*
+                Dictionary<int, (ItemType type, string name, int price, int size, float weight, int amount)> itemOrder = new();
+                for (int i = 0; i < Inventory.Count; i++)
+                {
+                    InventoryItem item = Inventory[i];
+                    if (item == null) continue;
+                    ItemType type = ItemType.Item;
+                    string name = item.GetName() ?? string.Empty;
+                    int price = item.Price;
+                    int size = item.GetSize();
+                    float weight = item.Weight;
+                    int amount = item.Amount;
+                    itemOrder[i] = (type, name, price, size, weight, amount);
+                }
+                */
+                Inventory.OrderByDescending(item => { return item.GetItemType() == itemType; }).ThenBy(item => { return item.Price; }).ThenBy(item => { return item.GetName(); });
+            }
+            public void OrderItemsByPrice()
+            {
+                Inventory = Inventory.OrderBy(item => item.Price).ToList();
+            }
+            public void OrderItemsBySize()
+            {
+                Inventory = Inventory.OrderBy(item => item.GetSize()).ToList();
+            }
+            public void OrderItemsByWeight()
+            {
+                Inventory = Inventory.OrderBy(item => item.Weight).ToList();
+            }
+            public void OrderItemsByAmount()
+            {
+                Inventory = Inventory.OrderBy(item => item.Amount).ToList();
+            }
+            public void OrderBy(RegexOrderItems order)
+            {
+                switch (order)
+                {
+                    case RegexOrderItems.Name:
+                        OrderItemsByName();
+                        break;
+                    case RegexOrderItems.Price:
+                        OrderItemsByPrice();
+                        break;
+                    case RegexOrderItems.Size:
+                        OrderItemsBySize();
+                        break;
+                    case RegexOrderItems.Weight:
+                        OrderItemsByWeight();
+                        break;
+                    case RegexOrderItems.Amount:
+                        OrderItemsByAmount();
+                        break;
+                    case RegexOrderItems.Type:
+                        OrderItemsByItemType(ItemType.Weapon);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            private void ReindexItems()
+            {
+                for (int i = 0; i < Inventory.Count; i++)
+                {
+                    Inventory[i].MoveItem(i);
+                }
+            }
+            #endregion
+            #region Swap Items
+            /// <summary>
+            /// Lets you swap 2 inventory items.
+            /// </summary>
+            /// <param name="index1">Item a</param>
+            /// <param name="index2">Item b</param>
+            /// <exception cref="IndexOutOfRangeException"> You seletected an item out of range</exception>
+            public void SwapItem(int index1, int index2)
+            {
+                if (index1 < 0 || index2 < 0 || index1 >= Inventory.Count || index2 >= Inventory.Count)
+                {
+                    throw new IndexOutOfRangeException();
+                }
+                if (index1 == index2)
+                {
+                    return; // No need to swap same items
+                }
+                try
+                {
+                    (Inventory[index1], Inventory[index2]) = (Inventory[index2], Inventory[index1]);
+                    // Update their slot IDs
+                    Inventory[index1].MoveItem(index2);
+                    Inventory[index2].MoveItem(index1);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Swap failed: {ex.Message}");
+                    throw;
+                }
+            }
+            /// <summary>
+            /// Set a item as Selected. Or <see cref="PendingItem"/>
+            /// </summary>
+            /// <param name="index">Which item</param>
+            public void SelectItem(int index)
+            {
+                PendingItem = (index >= 0 && index < Inventory.Count) ? index : -1;
+            }
+            /// <summary>
+            /// Get the selected item and then immidiatly clear it.
+            /// </summary>
+            /// <returns></returns>
+            public int GetPendingItemAndClear()
+            {
+                if (PendingItem > -1)
+                {
+                    int temp = PendingItem;
+                    PendingItem = -1;
+                    return temp;
+                }
+                return -1;
+            }
+            /// <summary>
+            /// Get the item awating to be swapped.
+            /// </summary>
+            /// <returns></returns>
+            public int GetPendingItem()
+            {
+                return PendingItem;
+            }
+            #endregion
+            #region Hotbar
+            /// <summary>
+            /// Setup the hotbar size and default slot
+            /// </summary>
+            /// <param name="amount">Size of the hotbar</param>
+            /// <param name="defaultHotbarSlot">Default slot</param>
+            public void SetupHotbar(int amount, int defaultHotbarSlot = 0)
+            {
+                HotbarSize = (byte)Mathf.Clamp(amount, 1, SizeOfInventory);
+                CurrentHotBarSlot = Mathf.Clamp(defaultHotbarSlot, 0, HotbarSize - 1);
+            }
+            /// <summary>
+            /// Scroll up or Scroll down.
+            /// </summary>
+            /// <param name="amount">A value +1 or -1</param>
+            public void ScrollItem(int amount)
+            {
+                if (amount == 0) return;
+                CurrentHotBarSlot += amount;
+                if (CurrentHotBarSlot < 0)
+                {
+                    CurrentHotBarSlot = HotbarSize - 1;
+                }
+                if (CurrentHotBarSlot > HotbarSize - 1)
+                {
+                    CurrentHotBarSlot = 0;
+                }
+            }
+            /// <summary>
+            /// Go to a slot. Does not throw an error if the slot is greater than the hotbar size, instead the method will do nothing.
+            /// </summary>
+            /// <param name="slot">slot ID to go to</param>
+            public void SetHotbarSlot(int slot)
+            {
+                if (slot >= 0 && slot < HotbarSize)
+                {
+                    CurrentHotBarSlot = slot;
+                }
+            }
+            /// <summary>
+            /// Gets the size of the hotbar
+            /// </summary>
+            /// <returns><code>HotbarSize</code></returns>
+            public int GetHotbarSize()
+            {
+                return HotbarSize;
+            }
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <returns>Gets the hotbar slot that is currently being highlighted</returns>
+            public int GetHotbarSlot()
+            {
+                return CurrentHotBarSlot;
+            }
+            #endregion
+            #region GetMescData
+            /// <summary>
+            /// Get the total inventory size. 
+            /// </summary>
+            public int GetInventorySize()
+            {
+                return SizeOfInventory;
+            }
+
+            /// <summary>
+            /// Gets the texture of an item.
+            /// </summary>
+            /// <param name="id">What slot the item is in your inventory.</param>
+            /// <returns>A Texture.</returns>
+            public Texture GetTextureItem(int id)
+            {
+                if (id < 0 || id >= Inventory.Count)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(id), "Item ID is out of inventory range");
+                }
+                return Inventory[id].GetTheTexture();
+            }
+            public int GetAmountOfEmptyItems()
+            {
+                return Inventory.FindAll(invItem => invItem.GetIsEmptyItem()).Count;
+            }
+            public bool GetIsFull()
+            {
+                return Inventory.FindAll(invItem => invItem.GetIsEmptyItem()).Count == 0;
+            }
+            #endregion
+            #region Get Inventory Items
+            /// <summary>
+            /// Get your ENTIRE INVENTORY
+            /// </summary>
+            /// <returns><see cref="Inventory"/></returns>
+            public List<InventoryItem> GetInventory()
+            {
+                return Inventory;
+            }
+            /// <summary>
+            /// Return only items based on the item type
+            /// </summary>
+            /// <param name="type">The item type</param>
+            /// <returns>The Inventory based on your type</returns>
+            public List<InventoryItem> GetInventory(ItemType type)
+            {
+                List<InventoryItem> typeTori = new();
+                foreach (InventoryItem item in Inventory)
+                {
+                    if (type == item.GetItemType())
+                    {
+                        typeTori.Add(item);
+                    }
+                }
+                return typeTori;
+            }
+            public List<InventoryItem> GetInventory(HoldingType type)
+            {
+                List<InventoryItem> typeTori = new();
+                foreach (InventoryItem item in Inventory)
+                {
+                    if (type == item.HoldingType)
+                    {
+                        typeTori.Add(item);
+                    }
+                }
+                return typeTori;
+            }
+            /// <summary>
+            /// Get a single inventory item based on slot id.
+            /// </summary>
+            /// <param name="id">The id of the item</param>
+            /// <returns>A <see cref="InventoryItem"/></returns>
+            public InventoryItem GetInventoryItem(int id)
+            {
+                if (id < 0 || id >= Inventory.Count)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(id), "Item ID is out of inventory range");
+                }
+                return Inventory[id];
+            }
+            /// <summary>
+            /// Get the inventory item based on <see cref="CurrentHotBarSlot"/>
+            /// </summary>
+            /// <returns></returns>
+            public InventoryItem GetInventoryItemCurrentHotbar()
+            {
+                return Inventory[CurrentHotBarSlot];
+            }
+            /// <summary>
+            /// Find an inventory item by name.
+            /// </summary>
+            /// <param name="name">The name of the item.</param>
+            /// <returns><see cref="InventoryItem"/></returns>
+            public InventoryItem GetInventoryItem(string name)
+            {
+                return Inventory.Find(item => item.GetName() == name);
+            }
+            #endregion
+            #region Full CHECK Scan
+            /// <summary>
+            /// Check passive data of items.
+            /// </summary>
+            public void CheckPassive()
+            {
+                for (int i = 0; i < Inventory.Count; i++)
+                {
+                    Inventory[i].GetPassiveData(Inventory);
+                }
+            }
+            #endregion
+            #region Throw Item
+            /// <summary>
+            /// Gets the item and then deletes it. Mainly used to throw items
+            /// </summary>
+            /// <param name="index"></param>
+            /// <returns></returns>
+            public InventoryItem ThrowItem(int index, int amount = 1)
+            {
+                if (Inventory[index].Amount > amount)
+                {
+                    Inventory[index].Amount -= amount;
+                    InventoryItem smallerItem = new(Inventory[index])
+                    {
+                        Amount = amount
+                    };
+                    return smallerItem;
+                }
+                //If the value is less than or equil to the amount, then just copy the item and delete it from the inventory.
+                InventoryItem item = new(Inventory[index]);
+                DeleteItem(index);
+                return item;
+            }
+            /// <summary>
+            /// Throws all of your items in one blob
+            /// </summary>
+            /// <param name="index">Which one</param>
+            /// <returns>The item to throw</returns>
+            public InventoryItem ThrowItems(int index)
+            {
+                InventoryItem item = new(Inventory[index]);
+                DeleteItem(index);
+                return item;
+            }
+            #endregion
+            #region Animation
+            public AnimationSys? GetAnimation(int id)
+            {
+                return Inventory[id].GetItem().GetAnimationClass();
+            }
+            #endregion
+            #region Disposal
+            protected virtual void Dispose(bool disposing)
+            {
+                if (!disposedValue)
+                {
+                    if (disposing)
+                    {
+
+                    }
+                    for (int i = 0; i < Inventory.Count; i++)
+                    {
+                        Inventory[i].Dispose();
+                    }
+                    // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                    // TODO: set large fields to null
+
+                    disposedValue = true;
+                }
+            }
+
+            // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+            ~InventorySystem()
+            {
+                // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+                Dispose(disposing: false);
+            }
+
+            public void Dispose()
+            {
+                // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+                Dispose(disposing: true);
+                GC.SuppressFinalize(this);
+            }
+            #endregion
+            #region MaxItems
+            public void MaxOutItems()
+            {
+                for (int i = 0; i < Inventory.Count; i++)
+                {
+                    Inventory[i].Amount = int.MaxValue;
+                }
+            }
+            #endregion
         }
         /// <summary>
         /// Create a quest
@@ -5763,7 +6702,7 @@ namespace BaseCharacter
             {
                 if (Stage != QuestStage.Completed) return;
 
-                player.AddMoney(MoneyReward);
+                player.DepositMoney(MoneyReward);
                 if (Inventory != null)
                 {
                     foreach (InventoryItem item in Inventory)
@@ -5775,1453 +6714,1037 @@ namespace BaseCharacter
             }
             #endregion
         }
-    }
-    namespace Enemy
-    {
-        public class PathFind
+        public static class BoxColors
         {
-               
-        }
-        public static class PresetPathing
-        {
-            
+            public static Color idle = new Color(0.2549019608f, 0.4352941176f, 0.5647058824f);
+            public static Color hover = new Color(0, 0.98823529f, 1);
+            public static Color idleSelected = new Color(0.9137254902f, 0.2392156863f, 0.6431372549f);
+            public static Color hoverSelected = new Color(0.7647058824f, 0.1411764706f, 0.7529411765f);
         }
     }
-    /// <summary>
-    /// Used by many storage systems such as <see cref="Player"/>, <see cref="Entities"/> To display inventory UI, you'll need to use <see cref="InvManager"/> to show textures and hotbars.
-    /// </summary>
-    public class InventorySystem : IInventorySystem<InventoryItem>, IDisposable
+    namespace Entities
     {
-        private bool disposedValue;
-
         /// <summary>
-        /// How many items can you hold
+        /// The class used for all 'entities' in the game.<br></br>This class contains many functionalties for AI and players. (No not the AI thats destroying the world) 
+        /// <list type="number"> 
+        /// <item>A <see cref="InventorySystem"/> to hold <see cref="InventoryItem"/>s</item>
+        /// <item>A <see cref="GroupOfStats"/>, which has a leveling system, stats, and the ability to switch quickly between characters.</item>
+        /// <item>Insturctions on how to deal with <see cref="Effect"/> (such as <see cref="Effects.FireDamage"/>)</item>
+        /// <item>Money and a Wallet. Currently money is a int value, I did not feel the need to make it a whole class.</item>
+        /// <item>Name, Desc, ID, </item>
+        /// </list>
+        /// The <see cref="Player"/> class is used on many objects that do not have a <see cref="Character"/>. A <see cref="Character"/> has a <see cref="Player"/> class in it, but you can use <see cref="Player"/> on its own.
         /// </summary>
-        protected int SizeOfInventory { get; set; }
-
-        /// <summary>
-        /// The base size of your inventory (without expansions)
-        /// </summary>
-        protected int BaseSizeOfInventory { get; set; }
-
-        /// <summary>
-        /// What you have in your inventory
-        /// </summary>
-        protected List<InventoryItem> Inventory { get; set; } = new List<InventoryItem>();
-
-        /// <summary>
-        /// The selected item used for swapping.
-        /// </summary>
-        protected int PendingItem { get; set; } = -1;
-
-        /// <summary>
-        /// Current Inventory Slot
-        /// </summary>
-        protected int CurrentHotBarSlot { get; set; } = 0;
-
-        /// <summary>
-        /// Hotbar Size.
-        /// </summary>
-        protected int HotbarSize { get; set; } = 6;
-        /// <summary>
-        /// Returns the total weight of all the items.
-        /// </summary>
-        protected float TotalWeight
+        public class Player : GroupOfStats, IWallet, INameDescSet, IApplyEffects
         {
-            get 
-            {
-                float weight = 0;
-                for (int i = 0; i < Inventory.Count; i++)
-                {
-                    weight += Inventory[i].Weight;
-                }
-                return weight;
-            }
-        }
-        #region Fill Null Inventory
+            public uint ID { get; private set; }
             /// <summary>
-            /// Clear an inventory and then fill it with empty items which can be moved or erased. 
-            /// Used to clear an inventory or to fill a Null inventory.
+            /// Name of the player
             /// </summary>
-        public void FillNullInventory()
-        {
-            for (int i = 0; i < Inventory.Count; i++)
+            public string Name { get; protected set; }
+            /// <summary>
+            /// Money
+            /// </summary>
+            protected int Money { get; set; }
+            /// <summary>
+            /// Are you alive
+            /// </summary>
+            protected bool IsAlive { get; set; }
+            /// <summary>
+            /// Description
+            /// </summary>
+            protected string Description { get; set; }
+            /// <summary>
+            /// Adranaline time based systems. 
+            /// </summary>
+            public float Adranaline { get; protected set; }
+            /// <summary>
+            /// How far away does it activate
+            /// </summary>
+            public float AdranalineDistance { get; protected set; }
+            
+            protected float RotationSpeed { get; set; }
+            
+            /// <summary>
+            /// Your current gravity
+            /// </summary>
+            public float Gravity { get; protected set; }
+            /// <summary>
+            /// base Gravity
+            /// </summary>
+            public float GravityBase { get; protected set; }
+            public float GravityProtectionTime { get; protected set; }
+            /// <summary>
+            /// Your Weight. 100 is the normal
+            /// </summary>
+            public float Weight
             {
-                Inventory[i].Dispose();
-            }
-            Inventory.Clear();
-            // Ensure SizeOfInventory is at least 1
-            int actualSize = Mathf.Max(1, SizeOfInventory);
-            for (int i = 0; i < actualSize; i++)
-            {
-                Inventory.Add(new InventoryItem(i));
-            }
-        }
-        /// <summary>
-        /// Will clear an inventory starting from <paramref name="start"/>
-        /// </summary>
-        /// <param name="start">Where to begin</param>
-        public void FillNullInventory(int start)
-        {
-            // Ensure SizeOfInventory is at least 1
-            int actualSize = Mathf.Max(1, SizeOfInventory);
-
-            if (start >= actualSize)
-            {
-                return;
-            }
-
-            // Remove items from start position to end
-            if (start < Inventory.Count)
-            {
-                for (int i = start; i < Inventory.Count; i++)
+                get
                 {
-                    Inventory[i].Dispose();
-                }
-                Inventory.RemoveRange(start, Inventory.Count - start);
-            }
-
-            // Add new empty items
-            for (int i = start; i < actualSize; i++)
-            {
-                Inventory.Add(new InventoryItem(i));
-            }
-        }
-        #endregion
-        #region Add and Delete Items/Inventory spaces
-        /// <summary>
-        /// Allows you to delete an item and replace it with an empty item.
-        /// </summary>
-        /// <param name="id">The slot at where the Inventory item was removed.</param>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when id is out of range</exception>
-        public void DeleteItem(int id)
-        {
-            if (id < 0 || id >= Inventory.Count)
-            {
-                throw new ArgumentOutOfRangeException(nameof(id), "Item ID is out of inventory range");
-            }
-            Inventory[id].Dispose();
-            Inventory[id] = new InventoryItem(id);
-        }
-        /// <summary>
-        /// Checks your entire inventory as to remove items which are <see cref="InventoryItem.MarkedForDeletion"/>
-        /// </summary>
-        public void CheckForDeletion()
-        {
-            for (int i = 0; i < Inventory.Count; i++)
-            {
-                if (Inventory[i].MarkedForDeletion)
-                {
-                    DeleteItem(i);
+                    return WeightBase * WeightAdjustment.Strength + TotalWeight;
                 }
             }
-        }
-        /// <summary>
-        /// Makes inventory bigger and fills the empty spots with empty items
-        /// </summary>
-        /// <param name="add">Number of slots to add</param>
-        public void AddInventorySpaces(int add)
-        {
-            int oldSize = SizeOfInventory;
-            add = Mathf.Max(1, Mathf.Abs(add));
-            SizeOfInventory += add;
-            FillNullInventory(oldSize);
-        }
-        /// <summary>
-        /// Adds an <see cref="InventoryItem"/>to the inventory unless the inventory is full
-        /// </summary>
-        /// <param name="item">The <see cref="InventoryItem"/> to be added</param>
-        /// <param name="start">Where to start the search. This is great when loading from a save file when you need to add spacing between items spawning in the inventory</param>
-        public bool AddItem(InventoryItem item, int start = 0)
-        {
-            if (item == null)
+            public float Aiming
             {
-                throw new ArgumentNullException(nameof(item), "Item cannot be null");
-            }
-
-            start = Mathf.Clamp(start, 0, SizeOfInventory - 1);
-
-            // First, try to stack with existing items of the same type
-            for (int i = 0; i < Mathf.Min(SizeOfInventory, Inventory.Count); i++)
-            {
-                if (!Inventory[i].GetIsEmptyItem())
+                get
                 {
-                    DuplicateReturn output = Inventory[i].GetIsDuplication(true, item);
-
-                    if (output == DuplicateReturn.Incrimented)
-                    {
-                        // Item was partially or fully stacked
-                        if (item.Amount <= 0 || item.MarkedForDeletion)
-                        {
-                            return true; // Item fully consumed
-                        }
-                        // Continue to find space for remaining items
-                        break;
-                    }
-                    else if (output == DuplicateReturn.True)
-                    {
-                        // Items are same type but couldn't stack (non-stackable or full)
-                        // Continue searching for empty slot
-                    }
+                    return Aim.Max * AimAdjustment.Strength + CryingAim;
                 }
             }
+            private float CryingAim = 0;
+            /// <summary>
+            /// Attribute Fire damage
+            /// </summary>
+            protected List<FireDamage> FireDamage { get; set; } = new List<FireDamage>();
+            /// <summary>
+            /// :^( effect
+            /// </summary>
+            protected List<Crying> Cryings { get; set; } = new List<Crying>();
+            /// <summary>
+            /// Flytation effect
+            /// </summary>
+            protected Floatation Floating { get; set; }
+            /// <summary>
+            /// Regenerate health over time
+            /// </summary>
+            protected List<Regeneration> ActiveRegenerations { get; set; } = new List<Regeneration>();
+            protected Wounded Wound { get; set; } = new Wounded();
+            public float BreakingSpeed { get; protected set; } = 1f;
+            //private string HomeScene { get; set; } = "SampleScene";
 
-            // Clean up any marked for deletion items
-            CheckForDeletion();
-
-            // If item still exists and has amount > 0, find empty slot
-            if (item.Amount > 0 && !item.MarkedForDeletion)
+            #region Initialization
+            /// <summary>
+            /// Setup player
+            /// </summary>
+            /// <param name="name"></param>
+            /// <param name="desc"></param>
+            /// <param name="healthBase"></param>
+            /// <param name="hpStartPercent"></param>
+            /// <param name="weight"></param>
+            /// <param name="vision"></param>
+            /// <param name="aim"></param>
+            /// <param name="sizeOfInventory"></param>
+            /// <param name="adranaline"></param>
+            public Player(string name, string desc, int healthBase, float hpStartPercent, float weight, float vision, float aim, int sizeOfInventory, float adranaline) : this(name, healthBase, hpStartPercent, weight, vision, sizeOfInventory)
             {
-                return FindEmptySlotForItem(item, start);
+                Description = desc;
+                Aim = new("Aim", aim, 2, 0);
+                Adranaline = adranaline;
             }
-
-            return true; // Item was fully stacked
-        }
-        /// <summary>
-        /// Find an empty slot for an item
-        /// </summary>
-        /// <param name="item">Item to add</param>
-        /// <param name="start">Start location for search</param>
-        /// <returns></returns>
-        private bool FindEmptySlotForItem(InventoryItem item, int start)
-        {
-            // Try to find an empty slot from start position
-            for (int i = start; i < SizeOfInventory; i++)
+            /// <summary>
+            /// Lets you create a basic player with the basic attributes.<br></br>
+            /// </summary>
+            /// <param name="name">The name of the player</param>
+            /// <param name="healthBase">Your Starting Health</param>
+            /// <param name="hpStartPercent">Percentage (A value from 0 to 1)</param>
+            /// <param name="speedBase">Your base speed</param>
+            /// <param name="jumpBase">Your base Jump</param>
+            /// <param name="weightBase">Your Weight. 1000 = Standered</param>
+            /// <param name="vision">Your interaction with enemies. Will decrease with stealth attributes</param>
+            /// <param name="sizeOfInventory">Your Inventory ise</param>
+            /// <param name="gravity">Your Gravity. Set to 1 for default (9.8)</param>
+            public Player(string name, int healthBase, float hpStartPercent, float weightBase, float vision, int sizeOfInventory) : this(name, sizeOfInventory)
             {
-                if (TryPlaceItemInSlot(item, i))
-                    return true;
+                WeightBase = weightBase;
+                VisionBase = new Stat("Vision", vision, -1, 0);
+                Health = new StatHealth(name, healthBase, 2, healthBase * hpStartPercent);
             }
-
-            // If not found from start position, search from beginning
-            if (start > 0)
+            public Player(string name, int sizeOfInventory)
             {
-                for (int i = 0; i < start; i++)
+                Name = name;
+                SizeOfInventory = sizeOfInventory;
+                BaseSizeOfInventory = sizeOfInventory;
+                Inventory = new List<InventoryItem>();
+                for (int i = 0; i < Resistances.Length; i++)
                 {
-                    if (TryPlaceItemInSlot(item, i))
-                        return true;
+                    Resistances[i] = 1;
                 }
-            }
-
-            Debug.Log("After searching for space in your inventory, we found NOTHING open.");
-            return false;
-        }
-        /// <summary>
-        /// Try to place an item in a slot.
-        /// </summary>
-        /// <param name="item">the item to add</param>
-        /// <param name="slotIndex">Start slot index</param>
-        /// <returns>Was it successfull</returns>
-        private bool TryPlaceItemInSlot(InventoryItem item, int slotIndex)
-        {
-            if (slotIndex < Inventory.Count)
-            {
-                if (Inventory[slotIndex].GetIsEmptyItem())
-                {
-                    Inventory[slotIndex] = item;
-                    item.MoveItem(slotIndex);
-                    CheckPhaseItem(slotIndex);
-                    return true;
-                }
-            }
-            else
-            {
-                // Expand the inventory list if needed
-                item.MoveItem(slotIndex);
-                Inventory.Add(item);
-                CheckPhaseItem(slotIndex);
-                return true;
-            }
-
-            return false;
-        }
-        /// <summary>
-        /// Adds multiple <see cref="InventoryItem"/> to the inventory
-        /// </summary>
-        /// <param name="items">Array of items to be added</param>
-        /// <param name="start">Where to start the search</param>
-        /// <returns>True if all items were added successfully</returns>
-        public bool AddItem(InventoryItem[] items, int start = 0)
-        {
-            if (items == null)
-            {
-                throw new ArgumentNullException(nameof(items), "Items array cannot be null");
-            }
-
-            if (Inventory == null || SizeOfInventory <= 0)
-            {
-                Debug.LogWarning("Inventory is not properly initialized");
-                return false;
-            }
-
-            start = Mathf.Clamp(start, 0, SizeOfInventory - 1);
-            bool allItemsAdded = true;
-
-            foreach (InventoryItem currentItem in items)
-            {
-                if (currentItem == null)
-                {
-                    Debug.LogWarning("Null item in array, skipping");
-                    continue;
-                }
-
-                bool itemAdded = false;
-
-                // First try to stack with existing items of the same type
-                for (int i = 0; i < Mathf.Min(SizeOfInventory, Inventory.Count); i++)
-                {
-                    if (!Inventory[i].GetIsEmptyItem())
-                    {
-                        DuplicateReturn dReturn = Inventory[i].GetIsDuplication(true, currentItem);
-
-                        if (dReturn == DuplicateReturn.Incrimented)
-                        {
-                            // Item was partially or fully stacked
-                            if (currentItem.Amount <= 0 || currentItem.MarkedForDeletion)
-                            {
-                                itemAdded = true; // Item fully consumed
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                // If item wasn't fully consumed by stacking and still exists, find empty slot
-                if (!itemAdded && currentItem.Amount > 0 && !currentItem.MarkedForDeletion)
-                {
-                    itemAdded = FindEmptySlotForItem(currentItem, start);
-                }
-                else if (currentItem.MarkedForDeletion || currentItem.Amount <= 0)
-                {
-                    // Item was fully consumed by stacking
-                    itemAdded = true;
-                }
-
-                if (!itemAdded)
-                {
-                    Debug.LogWarning($"Could not find space for item in inventory: {currentItem.GetName()}");
-                    allItemsAdded = false;
-                }
-
-                // Clean up after each item addition to free up slots
-                CheckForDeletion();
-            }
-
-            return allItemsAdded;
-        }
-        /// <summary>
-        /// Run a check that identifiefies which items are usable during the PreGame and PostVoting
-        /// </summary>
-        /// <param name="index"></param>
-        public void CheckPhaseItem(int index)
-        {
-            //TODO: Somthing that uses
-            //ItemType type = Inventory[index].GetItemType();
-        }
-        #endregion
-        #region Order By
-        public void OrderItemsByName()
-        {
-            Inventory = Inventory.OrderBy(item => item.GetName()).ToList();
-        }
-        public void OrderItemsByItemType()
-        {
-            Inventory = Inventory.OrderBy(item => item.GetItemType()).ToList();
-        }
-        public void OrderItemsBySize()
-        {
-            Inventory = Inventory.OrderBy(item => item.GetSize()).ToList();
-        }
-        public void OrderItemsByPrice()
-        {
-            Inventory = Inventory.OrderBy(item => item.Price).ToList();
-        }
-        private void ReindexItems()
-        {
-            for (int i = 0; i < Inventory.Count; i++)
-            {
-                Inventory[i].MoveItem(i);
-            }
-        }
-        #endregion
-        #region Swap Items
-        /// <summary>
-        /// Lets you swap 2 inventory items.
-        /// </summary>
-        /// <param name="index1">Item a</param>
-        /// <param name="index2">Item b</param>
-        /// <exception cref="IndexOutOfRangeException"> You seletected an item out of range</exception>
-        public void SwapItem(int index1, int index2)
-        {
-            if (index1 < 0 || index2 < 0 || index1 >= Inventory.Count || index2 >= Inventory.Count)
-            {
-                throw new IndexOutOfRangeException();
-            }
-            if (index1 == index2)
-            {
-                return; // No need to swap same items
-            }
-            try
-            {
-                (Inventory[index1], Inventory[index2]) = (Inventory[index2], Inventory[index1]);
-                // Update their slot IDs
-                Inventory[index1].MoveItem(index2);
-                Inventory[index2].MoveItem(index1);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Swap failed: {ex.Message}");
-                throw;
-            }
-        }
-        /// <summary>
-        /// Set a item as Selected. Or <see cref="PendingItem"/>
-        /// </summary>
-        /// <param name="index">Which item</param>
-        public void SelectItem(int index)
-        {
-            PendingItem = (index >= 0 && index < Inventory.Count) ? index : -1;
-        }
-        /// <summary>
-        /// Get the selected item and then immidiatly clear it.
-        /// </summary>
-        /// <returns></returns>
-        public int GetPendingItemAndClear()
-        {
-            if (PendingItem > -1)
-            {
-                int temp = PendingItem;
+                FillNullInventory();
                 PendingItem = -1;
-                return temp;
+                IsAlive = true;
             }
-            return -1;
-        }
-        /// <summary>
-        /// Get the item awating to be swapped.
-        /// </summary>
-        /// <returns></returns>
-        public int GetPendingItem()
-        {
-            return PendingItem;
-        }
-        #endregion
-        #region Hotbar
-        /// <summary>
-        /// Setup the hotbar size and default slot
-        /// </summary>
-        /// <param name="amount">Size of the hotbar</param>
-        /// <param name="defaultHotbarSlot">Default slot</param>
-        public void SetupHotbar(int amount, int defaultHotbarSlot = 0)
-        {
-            HotbarSize = (byte)Mathf.Clamp(amount, 1, SizeOfInventory);
-            CurrentHotBarSlot = Mathf.Clamp(defaultHotbarSlot, 0, HotbarSize - 1);
-        }
-        /// <summary>
-        /// Scroll up or Scroll down.
-        /// </summary>
-        /// <param name="amount">A value +1 or -1</param>
-        public void ScrollItem(int amount)
-        {
-            if (amount == 0) return;
-            CurrentHotBarSlot += amount;
-            if (CurrentHotBarSlot < 0)
+            public Player(string name, string desc, int sizeOfInventory)
             {
-                CurrentHotBarSlot = HotbarSize - 1;
-            }
-            if (CurrentHotBarSlot > HotbarSize - 1)
-            {
-                CurrentHotBarSlot = 0;
-            }
-        }
-        /// <summary>
-        /// Go to a slot. Does not throw an error if the slot is greater than the hotbar size, instead the method will do nothing.
-        /// </summary>
-        /// <param name="slot">slot ID to go to</param>
-        public void SetHotbarSlot(int slot)
-        {
-            if (slot >= 0 && slot < HotbarSize)
-            {
-                CurrentHotBarSlot = slot;
-            }
-        }
-        /// <summary>
-        /// Gets the size of the hotbar
-        /// </summary>
-        /// <returns><code>HotbarSize</code></returns>
-        public int GetHotbarSize()
-        {
-            return HotbarSize;
-        }
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns>Gets the hotbar slot that is currently being highlighted</returns>
-        public int GetHotbarSlot()
-        {
-            return CurrentHotBarSlot;
-        }
-        #endregion
-        #region GetMescData
-        /// <summary>
-        /// Get the total inventory size. 
-        /// </summary>
-        public int GetInventorySize()
-        {
-            return SizeOfInventory;
-        }
-
-        /// <summary>
-        /// Gets the texture of an item.
-        /// </summary>
-        /// <param name="id">What slot the item is in your inventory.</param>
-        /// <returns>A Texture.</returns>
-        public Texture GetTextureItem(int id)
-        {
-            if (id < 0 || id >= Inventory.Count)
-            {
-                throw new ArgumentOutOfRangeException(nameof(id), "Item ID is out of inventory range");
-            }
-            return Inventory[id].GetTheTexture();
-        }
-        public int GetAmountOfEmptyItems()
-        {
-            return Inventory.FindAll(invItem => invItem.GetIsEmptyItem()).Count;
-        }
-        #endregion
-        #region Get Inventory Items
-        /// <summary>
-        /// Get your ENTIRE INVENTORY
-        /// </summary>
-        /// <returns><see cref="Inventory"/></returns>
-        public List<InventoryItem> GetInventory()
-        {
-            return Inventory;
-        }
-        /// <summary>
-        /// Return only items based on the item type
-        /// </summary>
-        /// <param name="type">The item type</param>
-        /// <returns>The Inventory based on your type</returns>
-        public List<InventoryItem> GetInventory(ItemType type)
-        {
-            List<InventoryItem> typeTori = new();
-            foreach (InventoryItem item in Inventory)
-            {
-                if (type == item.GetItemType())
+                Name = name;
+                Description = desc;
+                SizeOfInventory = sizeOfInventory;
+                BaseSizeOfInventory = sizeOfInventory;
+                Inventory = new List<InventoryItem>();
+                for (int i = 0; i < Resistances.Length; i++)
                 {
-                    typeTori.Add(item);
+                    Resistances[i] = 1;
+                }
+                FillNullInventory();
+                PendingItem = -1;
+                IsAlive = true;
+            }
+
+            /// <summary>
+            /// Use when grabbing save data to fully fill out the player data.
+            /// </summary>
+            /// <param name="name"></param>
+            /// <param name="healthBase"></param>
+            /// <param name="health"></param>
+            /// <param name="speedBase"></param>
+            /// <param name="speed"></param>
+            /// <param name="speedBonus"></param>
+            /// <param name="jump"></param>
+            /// <param name="jumpBase"></param>
+            /// <param name="jumpNonGrounded"></param>
+            /// <param name="jumpBonus"></param>
+            /// <param name="gravity"></param>
+            /// <param name="gravityBase"></param>
+            /// <param name="weight"></param>
+            /// <param name="weightBase"></param>
+            /// <param name="weightBonus"></param>
+            /// <param name="vision"></param>
+            /// <param name="visionBase"></param>
+            /// <param name="reach"></param>
+            /// <param name="resistances"></param>
+            /// <param name="sizeOfInventory"></param>
+            /// <param name="baseSizeOfInventory"></param>
+            /// <param name="CurrenthotbarSlot"></param>
+            /// <param name="hotBarSize"></param>
+            /// <param name="money"></param>
+            /// <param name="adranalineDist">Distance of activation</param>
+            /// <param name="adrenaline">Time Scale abilty. Value goes from 0-1000</param>
+            /// <param name="aim">Accuracy</param>
+            /// <param name="desc">Desc</param>
+            /// <param name="groundPoundBase">Base groud pound</param>
+            /// <param name="healthMax">Max health</param>
+            /// <param name="Id">ID</param>
+            /// <param name="isAlive">Is the game alive</param>
+            /// <param name="level">Level</param>
+            /// <param name="pendingItem">Pending item</param>
+            /// <param name="rotationSpeedbase">Rotaion speed (2D games)</param>
+            public Player(uint Id, string name, string desc, int money,
+                bool isAlive, int healthMax, float health, int healthBase, float adrenaline, float adranalineDist,
+                float speedBase, float groundPoundBase, float jumpBase, float gravityBase, float weightBase, float visionBase, float aim, float reach, float[] resistances, int level,
+                int sizeOfInventory, int baseSizeOfInventory, int pendingItem, int CurrenthotbarSlot, int hotBarSize, float rotationSpeedbase)
+            {
+                //Basic
+                ID = Id;
+                Name = name;
+                Description = desc;
+                Money = money;
+                //Health
+                IsAlive = isAlive;
+                GameLevel = level;
+                Health = new StatHealth("Health", healthBase, 2, health, level);
+                Adranaline = adrenaline;
+                AdranalineDistance = adranalineDist;
+                //Stats
+                SpeedBase = new Stat("Speed", speedBase, 2, GameLevel);
+                JumpBase = new Stat("Jump", jumpBase, 0.5f, GameLevel);
+                Aim = new Stat("Aim", aim, 1f, GameLevel);
+                Reach = reach;
+                GravityBase = gravityBase;
+                Floating = new Floatation(gravityBase);
+                WeightBase = weightBase;
+                IsAlive = true;
+                VisionBase = new Stat("Vision", visionBase, -0.9f, GameLevel);
+                //Inventory
+                SizeOfInventory = sizeOfInventory;
+                BaseSizeOfInventory = baseSizeOfInventory;
+                Inventory = new List<InventoryItem>();
+                FillNullInventory();
+                PendingItem = pendingItem;
+                CurrentHotBarSlot = CurrenthotbarSlot;
+                HotbarSize = (byte)hotBarSize;
+                RotationSpeed = rotationSpeedbase;
+
+                SetupHotbar(HotbarSize, 0);
+                for (int i = 0; i < Resistances.Length; i++)
+                {
+                    Resistances[i] = resistances[i];
                 }
             }
-            return typeTori;
-        }
-        public List<InventoryItem> GetInventory(HoldingType type)
-        {
-            List<InventoryItem> typeTori = new();
-            foreach (InventoryItem item in Inventory)
+            /// <summary>
+            /// Setup a player for sleeper agent multiplayer mode
+            /// </summary>
+            /// <param name="name">Username</param>
+            /// <param name="healthBase">Uses <see cref="Shealth"/></param>
+            /// <param name="rotationSpeed">How fast you rotate with keyboard inputs</param>
+            /// <param name="weightBase">Knockback system. 1000 = weight</param>
+            /// <param name="sizeOfInventory">The size of your inventory. For sleeper agent, default to 2, as the game will automaticly add spaces when needed.</param>
+            public Player(string name, int healthBase, float rotationSpeed, float weightBase, int sizeOfInventory)
             {
-                if (type == item.HoldingType)
+                Name = name;
+                Health = new StatHealth(name, healthBase, 2, 0, healthBase);
+                RotationSpeed = rotationSpeed;
+                WeightBase = weightBase;
+                IsAlive = true;
+                SizeOfInventory = sizeOfInventory;
+                BaseSizeOfInventory = sizeOfInventory;
+                Inventory = new List<InventoryItem>();
+                for (int i = 0; i < Resistances.Length; i++)
                 {
-                    typeTori.Add(item);
+                    Resistances[i] = 1;
                 }
+                FillNullInventory();
+                PendingItem = -1;
             }
-            return typeTori;
-        }
-        /// <summary>
-        /// Get a single inventory item based on slot id.
-        /// </summary>
-        /// <param name="id">The id of the item</param>
-        /// <returns>A <see cref="InventoryItem"/></returns>
-        public InventoryItem GetInventoryItem(int id)
-        {
-            if (id < 0 || id >= Inventory.Count)
+            /// <summary>
+            /// Setup a player for sleeper agent host mode.
+            /// </summary>
+            /// <param name="name">Username</param>
+            /// <param name="healthBase">Uses <see cref="Shealth"/></param>
+            /// <param name="sizeOfInventory">The size of your inventory. For sleeper agent, default to 2, as the game will automaticly add spaces when needed.</param>
+            public Player(uint id, string name, int healthBase, int sizeOfInventory)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), "Item ID is out of inventory range");
-            }
-            return Inventory[id];
-        }
-        /// <summary>
-        /// Get the inventory item based on <see cref="CurrentHotBarSlot"/>
-        /// </summary>
-        /// <returns></returns>
-        public InventoryItem GetInventoryItemCurrentHotbar()
-        {
-            return Inventory[CurrentHotBarSlot];
-        }
-        /// <summary>
-        /// Find an inventory item by name.
-        /// </summary>
-        /// <param name="name">The name of the item.</param>
-        /// <returns><see cref="InventoryItem"/></returns>
-        public InventoryItem GetInventoryItem(string name)
-        {
-            return Inventory.Find(item => item.GetName() == name);
-        }
-        #endregion
-        #region Full CHECK Scan
-        /// <summary>
-        /// Check passive data of items.
-        /// </summary>
-        public void CheckPassive()
-        {
-            for (int i = 0; i < Inventory.Count; i++)
-            {
-                Inventory[i].GetPassiveData(Inventory);
-            }
-        }
-        #endregion
-        #region Throw Item
-        /// <summary>
-        /// Gets the item and then deletes it. Mainly used to throw items
-        /// </summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        public InventoryItem ThrowItem(int index, int amount = 1)
-        {
-            if (Inventory[index].Amount > amount)
-            {
-                Inventory[index].Amount -= amount;
-                InventoryItem smallerItem = new(Inventory[index]);
-                smallerItem.Amount = amount;
-                return smallerItem;
-            }
-            //If the value is less than or equil to the amount, then just copy the item and delete it from the inventory.
-            InventoryItem item = new(Inventory[index]);
-            DeleteItem(index);
-            return item;
-        }
-        /// <summary>
-        /// Throws all of your items in one blob
-        /// </summary>
-        /// <param name="index">Which one</param>
-        /// <returns>The item to throw</returns>
-        public InventoryItem ThrowItems(int index)
-        {
-            InventoryItem item = new(Inventory[index]);
-            DeleteItem(index);
-            return item;
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
+                Name = name;
+                Health = new StatHealth(name, healthBase, 2, 0, healthBase);
+                WeightBase = 1000f;
+                IsAlive = true;
+                SizeOfInventory = sizeOfInventory;
+                BaseSizeOfInventory = sizeOfInventory;
+                Inventory = new List<InventoryItem>();
+                for (int i = 0; i < Resistances.Length; i++)
                 {
-                    // TODO: dispose managed state (managed objects)
+                    Resistances[i] = 1;
                 }
+                FillNullInventory();
+                PendingItem = -1;
+                ID = id;
 
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
-                disposedValue = true;
             }
-        }
+            /// <summary>
+            /// A copy constructor.
+            /// </summary>
+            /// <param name="player"></param>
+            public Player (Player player, Player ogPlayer, bool copyInventory = false, bool copyIdentity = false, bool copyHud = false, bool copyLevel = false)
+            {
+                if (copyInventory)
+                {
+                    PendingItem = -1;
+                    SizeOfInventory = player.SizeOfInventory;
+                    BaseSizeOfInventory = player.BaseSizeOfInventory;
+                    FillNullInventory();
+                    Inventory = player.Inventory;
+                }
+                else
+                {
+                    PendingItem = ogPlayer.PendingItem;
+                    SizeOfInventory = ogPlayer.SizeOfInventory;
+                    BaseSizeOfInventory = ogPlayer.BaseSizeOfInventory;
+                    FillNullInventory();
+                    Inventory = ogPlayer.Inventory;
+                }
+                if (copyHud)
+                {
+                    this.HotbarSize = player.HotbarSize;
+                }
+                else
+                {
+                    this.HotbarSize = ogPlayer.HotbarSize;
+                }
+                if (copyIdentity)
+                {
+                    this.ID = player.ID;
+                    this.Name = player.Name;
+                    this.Description = player.Description;
+                    this.Money = player.Money;
+                }
+                else
+                {
+                    this.ID = ogPlayer.ID;
+                    this.Name = ogPlayer.Name;
+                    this.Description = ogPlayer.Description;
+                    this.Money = ogPlayer.Money;
+                }
+                if (copyLevel)
+                {
+                    this.GameLevel = ogPlayer.GameLevel;
+                }
+                else
+                {
+                    this.GameLevel = ogPlayer.GameLevel;
+                }
+                this.Adranaline = player.Adranaline;
+                this.AdranalineDistance = player.AdranalineDistance;
+                this.Aim = player.Aim;
+                this.BreakingSpeed = player.BreakingSpeed;
+                this.Health = player.Health;
+                this.GravityProtectionTime = player.GravityProtectionTime;
+                this.GravityBase = player.GravityBase;
+                this.GroundPoundBase = player.GroundPoundBase;
+                this.JumpBonus = player.JumpBonus;
+                this.RotationSpeed = player.RotationSpeed;
+                this.Resistances = player.Resistances;
+                this.SpeedBase = player.SpeedBase;
+                this.VisionBase = player.VisionBase;
+                this.WeightBase = player.WeightBase;
+                this.Floating = new Floatation(Gravity);
 
-        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        // ~InventorySystem()
-        // {
-        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        //     Dispose(disposing: false);
-        // }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-        #endregion
-    }
-    /// <summary>
-    /// The player class. Use for any real life persons playing the game.
-    /// </summary>
-    public class Player : InventorySystem, IWallet, INameDesc, IApplyEffects, IMoney
-    {
-        public uint ID { get; private set; }
-        /// <summary>
-        /// Name of the player
-        /// </summary>
-        public string Name { get; protected set; }
-        public string Desc { get; protected set; }
-        /// <summary>
-        /// Money
-        /// </summary>
-        protected int Money { get; set; }
-        /// <summary>
-        /// Are you alive
-        /// </summary>
-        protected bool IsAlive { get; set; }
-        /// <summary>
-        /// Description
-        /// </summary>
-        protected string Description { get; set; }
-        public StatHealth Health { get; private set; }
-        /// <summary>
-        /// Adranaline time based systems. 
-        /// </summary>
-        public float Adranaline { get; protected set; }
-        /// <summary>
-        /// How far away does it activate
-        /// </summary>
-        public float AdranalineDistance { get; protected set; }
-        /// <summary>
-        /// Your base Speed on spawn
-        /// </summary>
-        public Stat SpeedBase { get; private set; }
-        /// <summary>
-        /// Your bonus speed from external items such as speed boosts or powerups
-        /// </summary>
-        protected StatAdjustment SpeedBonus { get; set; } = new StatAdjustment();
-        /// <summary>
-        /// Your current speed
-        /// </summary>
-        protected float Speed
-        {
-            get
-            {
-                return SpeedBase.Max * SpeedBonus.Strength;
             }
-        }
-        protected float RotationSpeed { get; set; }
-        /// <summary>
-        /// Your current Jump
-        /// </summary>
-        public float Jump
-        {
-            get
+            [Obsolete("Comes with preset stats, use the Player templete instead to setup movement.",false)]
+            public void SetupMovement(float speed, float jump, float groundPound, float gravity, float rotationSpeed, float breakSpeed, float gravityProtectionTime)
             {
-                return JumpBase.Max * JumpBonus.Strength;
+                SpeedBase = new Stat("Speed", speed, 5, 0);
+                JumpBase = new Stat("Jump", jump, 0.5f, 0);
+                GroundPoundBase = new Stat("Gpound", groundPound, 30, 0);
+                GravityBase = gravity;
+                Floating = new Floatation(gravity);
+                RotationSpeed = rotationSpeed;
+                BreakingSpeed = breakSpeed;
+                GravityProtectionTime = gravityProtectionTime;
             }
-        }
-        public float GroundPound
-        {
-            get
+            public void SetupMovement(float gravity, float rotationSpeed, float breakSpeed, float gravityProtectionTime)
             {
-                return GroundPoundBase.Max * GroundPoundBonus.Strength;
+                GravityBase = gravity;
+                Floating = new Floatation(gravity);
+                RotationSpeed = rotationSpeed;
+                BreakingSpeed = breakSpeed;
+                GravityProtectionTime = gravityProtectionTime;
             }
-        }
-        public Stat GroundPoundBase { get; private set; }
-        protected StatAdjustment GroundPoundBonus { get; set; } = new StatAdjustment();
-        /// <summary>
-        /// Your Jump on game start
-        /// </summary>
-        public Stat JumpBase { get; protected set; }
-        /// <summary>
-        /// Your bonus jump from external items such as jump boots or powerups
-        /// </summary>
-        protected StatAdjustment JumpBonus { get; set; } = new StatAdjustment();
-        /// <summary>
-        /// Your current gravity
-        /// </summary>
-        protected float Gravity { get; set; }
-        /// <summary>
-        /// base Gravity
-        /// </summary>
-        public float GravityBase { get; protected set; }
-        public float GravityProtectionTime { get; protected set; }
-        /// <summary>
-        /// Your Weight. 100 is the normal
-        /// </summary>
-        public float Weight
-        {
-            get
-            {
-                return WeightBase * WeightAdjustment.Strength + TotalWeight;
-            }
-        }
-        /// <summary>
-        /// Your Weight on spawn
-        /// </summary>
-        public float WeightBase { get; protected set; }
-        /// <summary>
-        /// Adjusting weight due to items, armor, effects, etc...
-        /// </summary>
-        protected StatAdjustment WeightAdjustment { get; set; } = new StatAdjustment();
-        /// <summary>
-        /// Interaction range from enemies and also effects how stealthy you are.
-        /// </summary>
-        public float Vision
-        {
-            get
-            {
-                return VisionBase.Max * VisionAdjustment.Strength;
-            }
-        }
-        /// <summary>
-        /// Your base vision at spawn
-        /// </summary>
-        public Stat VisionBase { get; protected set; }
-        public StatAdjustment VisionAdjustment { get; protected set; } = new StatAdjustment();
-        public float Aiming 
-        { 
-            get
-            {
-                return Aim.Max * AimAdjustment.Strength + CryingAim;
-            } 
-        }
-        public Stat Aim { get; protected set; }
-        private float CryingAim = 0;
-        public StatAdjustment AimAdjustment{ get; protected set; } = new StatAdjustment();
-        /// <summary>
-        /// Interaction range.
-        /// </summary>
-        protected float Reach { get; set; }
-        protected float[] Resistances { get; set; } = new float[Enum.GetValues(typeof(WeaponClass)).Length];
-        /// <summary>
-        /// Attribute Fire damage
-        /// </summary>
-        protected List<FireDamage> FireDamage { get; set; } = new List<FireDamage>();
-        /// <summary>
-        /// :^( effect
-        /// </summary>
-        protected List<Crying> Cryings { get; set; } = new List<Crying>();
-        /// <summary>
-        /// Flytation effect
-        /// </summary>
-        protected Floatation Floating { get; set; }
-        /// <summary>
-        /// Regenerate health over time
-        /// </summary>
-        protected List<Regeneration> ActiveRegenerations { get; set; } = new List<Regeneration>();
-        protected Wounded Wound { get; set; } = new Wounded();
-        protected QuestSystem QuestSystem { get; set; }
-        public int GameLevel
-        {
-            get
-            {
-                return level;
-            }
-            protected set
-            {
-                level = value;
-                Health.Level = value;
-                SpeedBase.Level = value;
-                JumpBase.Level = value;
-                VisionBase.Level = value;
-                GroundPoundBase.Level = value;
-                Aim.Level = value;
-            }
-        }
-        private int level;
-        public float BreakingSpeed { get; protected set; } = 1f;
-        //private string HomeScene { get; set; } = "SampleScene";
-
-        #region Initialization
-        /// <summary>
-        /// Setup player
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="desc"></param>
-        /// <param name="healthBase"></param>
-        /// <param name="hpStartPercent"></param>
-        /// <param name="weight"></param>
-        /// <param name="vision"></param>
-        /// <param name="aim"></param>
-        /// <param name="sizeOfInventory"></param>
-        /// <param name="adranaline"></param>
-        public Player(string name, string desc, int healthBase, float hpStartPercent, float weight, float vision, float aim, int sizeOfInventory, float adranaline) : this(name, healthBase, hpStartPercent, weight, vision, sizeOfInventory)
-        {
-            Desc = desc;
-            Aim = new("Aim", aim, 2, 0);
-            Adranaline = adranaline;
-        }
-        /// <summary>
-        /// Lets you create a basic player with the basic attributes.<br></br>
-        /// </summary>
-        /// <param name="name">The name of the player</param>
-        /// <param name="healthBase">Your Starting Health</param>
-        /// <param name="hpStartPercent">Percentage (A value from 0 to 1)</param>
-        /// <param name="speedBase">Your base speed</param>
-        /// <param name="jumpBase">Your base Jump</param>
-        /// <param name="weightBase">Your Weight. 1000 = Standered</param>
-        /// <param name="vision">Your interaction with enemies. Will decrease with stealth attributes</param>
-        /// <param name="sizeOfInventory">Your Inventory ise</param>
-        /// <param name="gravity">Your Gravity. Set to 1 for default (9.8)</param>
-        public Player(string name, int healthBase, float hpStartPercent, float weightBase, float vision, int sizeOfInventory)
-        {
-            Name = name;
-            Health = new StatHealth(name, healthBase, 2, 0, healthBase * hpStartPercent);
-            WeightBase = weightBase;
-            IsAlive = true;
-            VisionBase = new Stat("Vision", vision, -1, 0);
-            SizeOfInventory = sizeOfInventory;
-            BaseSizeOfInventory = sizeOfInventory;
-            Inventory = new List<InventoryItem>();
-            for (int i = 0; i < Resistances.Length; i++)
-            {
-                Resistances[i] = 1;
-            }
-            FillNullInventory();
-            PendingItem = -1;
-        }
-
-        /// <summary>
-        /// Use when grabbing save data to fully fill out the player data.
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="healthBase"></param>
-        /// <param name="health"></param>
-        /// <param name="speedBase"></param>
-        /// <param name="speed"></param>
-        /// <param name="speedBonus"></param>
-        /// <param name="jump"></param>
-        /// <param name="jumpBase"></param>
-        /// <param name="jumpNonGrounded"></param>
-        /// <param name="jumpBonus"></param>
-        /// <param name="gravity"></param>
-        /// <param name="gravityBase"></param>
-        /// <param name="weight"></param>
-        /// <param name="weightBase"></param>
-        /// <param name="weightBonus"></param>
-        /// <param name="vision"></param>
-        /// <param name="visionBase"></param>
-        /// <param name="reach"></param>
-        /// <param name="resistances"></param>
-        /// <param name="sizeOfInventory"></param>
-        /// <param name="baseSizeOfInventory"></param>
-        /// <param name="CurrenthotbarSlot"></param>
-        /// <param name="hotBarSize"></param>
-        /// <param name="money"></param>
-        /// <param name="adranalineDist">Distance of activation</param>
-        /// <param name="adrenaline">Time Scale abilty. Value goes from 0-1000</param>
-        /// <param name="aim">Accuracy</param>
-        /// <param name="desc">Desc</param>
-        /// <param name="groundPoundBase">Base groud pound</param>
-        /// <param name="healthMax">Max health</param>
-        /// <param name="Id">ID</param>
-        /// <param name="isAlive">Is the game alive</param>
-        /// <param name="level">Level</param>
-        /// <param name="pendingItem">Pending item</param>
-        /// <param name="rotationSpeedbase">Rotaion speed (2D games)</param>
-        public Player(uint Id, string name, string desc, int money,
-            bool isAlive, int healthMax, float health, int healthBase, float adrenaline, float adranalineDist,
-            float speedBase, float groundPoundBase, float jumpBase, float gravityBase, float weightBase, float visionBase, float aim, float reach, float[] resistances, int level,
-            int sizeOfInventory, int baseSizeOfInventory, int pendingItem, int CurrenthotbarSlot, int hotBarSize, float rotationSpeedbase)
-        {
-            //Basic
-            ID = Id;
-            Name = name;
-            Desc = desc;
-            Money = money;
-            //Health
-            IsAlive = isAlive;
-            GameLevel = level;
-            Health = new StatHealth("Health", healthBase, 2, level, health);
-            Adranaline = adrenaline;
-            AdranalineDistance = adranalineDist;
-            //Stats
-            SpeedBase = new Stat("Speed", speedBase, 2, GameLevel);
-            JumpBase = new Stat("Jump", jumpBase, 0.5f, GameLevel);
-            Aim = new Stat("Aim", aim, 1f, GameLevel);
-            Reach = reach;
-            GravityBase = gravityBase;
-            Floating = new Floatation(gravityBase);
-            WeightBase = weightBase;
-            IsAlive = true;
-            VisionBase = new Stat("Vision", visionBase, -0.9f, GameLevel);
-            //Inventory
-            SizeOfInventory = sizeOfInventory;
-            BaseSizeOfInventory = baseSizeOfInventory;
-            Inventory = new List<InventoryItem>();
-            FillNullInventory();
-            PendingItem = pendingItem;
-            CurrentHotBarSlot = CurrenthotbarSlot;
-            HotbarSize = (byte)hotBarSize;
-            RotationSpeed = rotationSpeedbase;
-
-            SetupHotbar(HotbarSize, 0);
-            for (int i = 0; i < Resistances.Length; i++)
-            {
-                Resistances[i] = resistances[i];
-            }
-        }
-        /// <summary>
-        /// Setup a player for sleeper agent multiplayer mode
-        /// </summary>
-        /// <param name="name">Username</param>
-        /// <param name="healthBase">Uses <see cref="Shealth"/></param>
-        /// <param name="rotationSpeed">How fast you rotate with keyboard inputs</param>
-        /// <param name="weightBase">Knockback system. 1000 = weight</param>
-        /// <param name="sizeOfInventory">The size of your inventory. For sleeper agent, default to 2, as the game will automaticly add spaces when needed.</param>
-        public Player(string name, int healthBase, float rotationSpeed, float weightBase, int sizeOfInventory)
-        {
-            Name = name;
-            Health = new StatHealth(name, healthBase, 2, 0, healthBase);
-            RotationSpeed = rotationSpeed;
-            WeightBase = weightBase;
-            IsAlive = true;
-            SizeOfInventory = sizeOfInventory;
-            BaseSizeOfInventory = sizeOfInventory;
-            Inventory = new List<InventoryItem>();
-            for (int i = 0; i < Resistances.Length; i++)
-            {
-                Resistances[i] = 1;
-            }
-            FillNullInventory();
-            PendingItem = -1;
-        }
-        /// <summary>
-        /// Setup a player for sleeper agent host mode.
-        /// </summary>
-        /// <param name="name">Username</param>
-        /// <param name="healthBase">Uses <see cref="Shealth"/></param>
-        /// <param name="sizeOfInventory">The size of your inventory. For sleeper agent, default to 2, as the game will automaticly add spaces when needed.</param>
-        public Player(uint id, string name, int healthBase, int sizeOfInventory)
-        {
-            Name = name;
-            Health = new StatHealth(name, healthBase, 2, 0, healthBase);
-            WeightBase = 1000f;
-            IsAlive = true;
-            SizeOfInventory = sizeOfInventory;
-            BaseSizeOfInventory = sizeOfInventory;
-            Inventory = new List<InventoryItem>();
-            for (int i = 0; i < Resistances.Length; i++)
-            {
-                Resistances[i] = 1;
-            }
-            FillNullInventory();
-            PendingItem = -1;
-            ID = id;
-
-        }
-        public void SetupMovement(float speed, float jump, float groundPound, float gravity, float rotationSpeed, float breakSpeed, float gravityProtectionTime)
-        {
-            SpeedBase = new Stat("Speed", speed, 5, 0);
-            JumpBase = new Stat("Jump", jump, 0.5f, 0);
-            GroundPoundBase = new Stat("GroundPound", groundPound, 30, 0);
-            GravityBase = gravity;
-            Floating = new Floatation(gravity);
-            RotationSpeed = rotationSpeed;
-            BreakingSpeed = breakSpeed;
-            GravityProtectionTime = gravityProtectionTime;
-        }
-        #endregion
-        #region Money
-        /// <summary>
-        /// Get how much money you have
-        /// </summary>
-        /// <returns></returns>
-        public int GetMoneyInt()
-        {
-            return Money;
-        }
-        /// <summary>
-        /// Get how much money you have formatted as a string
-        /// </summary>
-        /// <returns>Dollars.Cents</returns>
-        public string GetMoney()
-        {
-            return $"{Money / 100.0:C2}";
-        }
-        public void AddMoney(int amount)
-        {
-            Money += amount;
-        }
-        public int SpendMoney(int amount)
-        {
-            Money -= amount;
-            if (Money > 0)
+            #endregion
+            #region Money
+            /// <summary>
+            /// Get how much money you have
+            /// </summary>
+            /// <returns></returns>
+            public int GetMoneyInt()
             {
                 return Money;
             }
-            else
+            /// <summary>
+            /// Get how much money you have formatted as a string
+            /// </summary>
+            /// <returns>Dollars.Cents</returns>
+            public string GetMoney()
+            {
+                return $"{Money / 100.0:C2}";
+            }
+            public void DepositMoney(int amount)
             {
                 Money += amount;
-                return 0;
             }
-        }
-        #endregion
-        #region Resistances
-        public void SetupResistance(WeaponClass wpnclass, float value)
-        {
-            Health.SetResistance(wpnclass, value);
-        }
-        public void SetupResistances(params (WeaponClass, float)[] resistances)
-        {
-            for (int i = 0; i < resistances.Length; i++)
+            public int WithdrawMoney(int amount)
             {
-                Health.SetResistance(resistances[i].Item1, resistances[i].Item2);
-            }
-        }
-        public float[] GetResistances()
-        {
-            return Resistances;
-        }
-        #endregion
-        #region Vision
-
-        #endregion
-        #region Weight
-        /// <summary>
-        /// Set WeightAdjustment. You cannot effect WeightBase. 
-        /// <code> Weight = WeightBase + WeightAdjustment;</code>
-        /// </summary>
-        /// <param name="amount">Set WeightAdjustment</param>
-        public void SetWeight(int amount)
-        {
-            WeightBase = amount;
-        }
-        #endregion
-        #region Speed, Rotation,
-        /// <summary>
-        /// Returns your speed value
-        /// </summary>
-        /// <returns>Speed</returns>
-        public float GetSpeed()
-        {
-            return Speed;
-        }
-        public float GetSpeedBase()
-        {
-            return SpeedBase.Max;
-        }
-        public void SetRotationSpeed(float amount)
-        {
-            RotationSpeed = amount;
-        }
-        /// <summary>
-        /// Get rotation speed with a modifier
-        /// </summary>
-        /// <param name="multi">Multiply <see cref="RotationSpeed"/>by</param>
-        /// <returns><see cref="RotationSpeed"/> * <paramref name="multi"/></returns>
-        public float GetRotationSpeed(float multi)
-        {
-            return RotationSpeed * multi;
-        }
-        #endregion
-        #region Gravity, Jump
-        public float GetGravity()
-        {
-            return Gravity;
-        }
-        public float GetGroundPound(bool baseValue)
-        {
-            if (baseValue)
-            {
-                return GroundPoundBase.Max;
-            }
-            return GroundPound;
-        }
-        #endregion
-        #region Name and Description
-        public void SetName(string name)
-        {
-            if (name.Length > 19 || name.Length < 4)
-            {
-                return;
-            }
-            else
-            {
-                Name = name;
-            }
-        }
-        public bool GetName(string name)
-        {
-            return Name == name;
-        }
-        public string GetName()
-        {
-            return Name;
-        }
-        /// <summary>
-        /// Set the desc of the player
-        /// </summary>
-        /// <param name="desc">Set the Desc using a string</param>
-        public void SetDec(string desc)
-        {
-            Description = desc;
-        }
-        /// <summary>
-        /// Get the desc of the player
-        /// </summary>
-        /// <returns><code>Description</code></returns>
-        public string GetDesc()
-        {
-            return Description;
-        }
-        public bool GetDesc(string desc)
-        {
-            return Description == desc;
-        }
-        #endregion
-        #region Reach
-        /// <summary>
-        /// The range you can interact with objects in a raidus
-        /// </summary>
-        /// <param name="range">new range</param>
-        public void SetReachRange(float range)
-        {
-            Reach = range;
-        }
-        public float GetReach()
-        {
-            return Reach;
-        }
-        #endregion
-        #region Animation
-        public AnimationSys? GetAnimation(int id)
-        {
-            AnimationSys? clssy = Inventory[id].GetItem().GetAnimationClass();
-            return clssy;
-        }
-        #endregion
-        #region Attributes
-        /// <summary>
-        /// The main Attribute applyer.
-        /// </summary>
-        /// <param name="attribute"></param>
-        public virtual void ApplyAttribute(Effects attribute)
-        {
-            ApplyAttribute(attribute.Attributes, attribute.Strength, attribute.Time, attribute.Option);
-            if (attribute.GetOtherEffects() != null)
-            {
-                foreach (string search in attribute.GetOtherEffects())
+                Money -= amount;
+                if (Money > 0)
                 {
-                    ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(search));
+                    return Money;
+                }
+                else
+                {
+                    Money += amount;
+                    return 0;
                 }
             }
-        }
-        public virtual void ApplyAttribute(List<Effects> attribute)
-        {
-            if (attribute.Count <= 0) return;
-            for (int i = 0; i < attribute.Count; i++)
+            #endregion
+            #region Rotation
+            public void SetRotationSpeed(float amount)
             {
-                ApplyAttribute(attribute[i].Attributes, attribute[i].Strength, attribute[i].Time, attribute[i].Option);
-                if (attribute[i].GetOtherEffects() != null)
+                RotationSpeed = amount;
+            }
+            /// <summary>
+            /// Get rotation speed with a modifier
+            /// </summary>
+            /// <param name="multi">Multiply <see cref="RotationSpeed"/>by</param>
+            /// <returns><see cref="RotationSpeed"/> * <paramref name="multi"/></returns>
+            public float GetRotationSpeed(float multi)
+            {
+                return RotationSpeed * multi;
+            }
+            #endregion
+            #region Name and Description
+            public void SetName(string name)
+            {
+                if (name.Length > 19 || name.Length < 4)
                 {
-                    for (int j = 0; j < attribute[i].GetOtherEffects().Length; j++)
+                    return;
+                }
+                else
+                {
+                    Name = name;
+                }
+            }
+            public bool GetName(string name)
+            {
+                return Name == name;
+            }
+            public string GetName()
+            {
+                return Name;
+            }
+            /// <summary>
+            /// Set the desc of the player
+            /// </summary>
+            /// <param name="desc">Set the Desc using a string</param>
+            public void SetDec(string desc)
+            {
+                Description = desc;
+            }
+            /// <summary>
+            /// Get the desc of the player
+            /// </summary>
+            /// <returns><code>Description</code></returns>
+            public string GetDesc()
+            {
+                return Description;
+            }
+            public bool GetDesc(string desc)
+            {
+                return Description == desc;
+            }
+            public void SetDescription(string desc)
+            {
+                Description = desc;
+            }
+            #endregion
+            #region Attributes
+            /// <summary>
+            /// The main Attribute applyer.
+            /// </summary>
+            /// <param name="attribute"></param>
+            public virtual void ApplyAttribute(Effect attribute)
+            {
+                ApplyAttribute(attribute.Attributes, attribute.Strength, attribute.Time, attribute.Option);
+                if (attribute.GetOtherEffects() != null)
+                {
+                    foreach (string search in attribute.GetOtherEffects())
                     {
-                        ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(attribute[i].GetOtherEffects()));
+                        ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(search));
                     }
                 }
             }
-        }
-        public virtual void ApplyAttribute(Effects[] attribute)
-        {
-            if (attribute.Length <= 0) return;
-            for (int i = 0; i < attribute.Length; i++)
+            public virtual void ApplyAttribute(List<Effect> attribute)
             {
-                ApplyAttribute(attribute[i].Attributes, attribute[i].Strength, attribute[i].Time, attribute[i].Option);
-                if (attribute[i].GetOtherEffects() != null)
+                if (attribute.Count <= 0) return;
+                for (int i = 0; i < attribute.Count; i++)
                 {
-                    for (int j = 0; j < attribute[i].GetOtherEffects().Length; j++)
+                    ApplyAttribute(attribute[i].Attributes, attribute[i].Strength, attribute[i].Time, attribute[i].Option);
+                    if (attribute[i].GetOtherEffects() != null)
                     {
-                        ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(attribute[i].GetOtherEffects()));
+                        for (int j = 0; j < attribute[i].GetOtherEffects().Length; j++)
+                        {
+                            ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(attribute[i].GetOtherEffects()));
+                        }
                     }
                 }
             }
-        }
-        public virtual void ApplyAttribute(AttributesTemplete attribute)
-        {
-            ApplyAttribute(attribute.GetAttriStruct());
-        }
-        public virtual void ApplyAttribute(List<AttributesTemplete> attribute)
-        {
-            if (attribute.Count <= 0) return;
-            for (int i = 0; i < attribute.Count; i++)
+            public virtual void ApplyAttribute(Effect[] attribute)
             {
-                ApplyAttribute(attribute[i].GetAttriStruct());
-            }
-        }
-        public virtual void ApplyAttribute(AttributesTemplete[] attribute)
-        {
-            if (attribute.Length <= 0) return;
-            for (int i = 0; i < attribute.Length; i++)
-            {
-                ApplyAttribute(attribute[i].GetAttriStruct());
-            }
-        }
-        /// <summary>
-        /// Apply attributes
-        /// </summary>
-        /// <param name="attributes">the attribute</param>
-        /// <param name="strength">How strong the attribute is</param>
-        /// <param name="time">How long it lasts</param>
-        /// <param name="options">Usually contains tick rate, but sometimes contains addiotnal option such as Lift value in Floataitons</param>
-        public virtual void ApplyAttribute(List<Attributes> attributes, List<float> strength, List<float> time, List<float> options)
-        {
-            if (attributes.Count <= 0) return;
-            for (int i = 0; i < attributes.Count; i++)
-            {
-                ApplyAttribute(attributes[i], strength[i], time[i], options[i]);
-            }
-        }
-        public virtual void ApplyAttribute(Attributes attributes, float strength, float time, float options)
-        {
-            Debug.Log($"Attributes: {attributes}, Stength: {strength}, Time: {time}, Options: {options}");
-            if (attributes == Attributes.Poison)
-            {
-                SetFireDamage(strength, time, options);
-            }
-            if (attributes == Attributes.Flytation)
-            {
-                SetFlyatation(strength, time, options);
-            }
-            if (attributes == Attributes.Regeneration)
-            {
-                SetRegeneration(strength, time, options);
-            }
-            if (attributes == Attributes.Crying)
-            {
-                SetCrying(strength, time, options);
-            }
-            if (attributes == Attributes.Wounded)
-            {
-                SetWounded(strength, time, options);
-            }
-            if (attributes == Attributes.Speed)
-            {
-                SpeedBonus.SetAdjustment(strength, time);
-            }
-            if (attributes == Attributes.Jump)
-            {
-                JumpBonus.SetAdjustment(strength, time);
-            }
-        }
-        /// <summary>
-        /// Progress attribtues to the next phase of the game.
-        /// </summary>
-        protected void SetFireDamage(float damage, float time, float tickRate)
-        {
-            FireDamage.Add(new FireDamage(damage, time, tickRate));
-        }
-        protected void SetFlyatation(float strength, float time, float lift)
-        {
-            Floating.SetupFloatation(strength, time, lift);
-            Gravity = Floating.ResetGravity(GravityBase);
-        }
-        protected void SetRegeneration(float health, float time, float tickRate)
-        {
-            ActiveRegenerations.Add(new Regeneration(health, time, tickRate));
-        }
-        protected void SetCrying(float strength, float time, float speedInc)
-        {
-            Cryings.Add(new Crying(strength, time, speedInc));
-        }
-        protected void SetWounded(float resistance, float time, float absorption)
-        {
-            Wound.SetupResistance(resistance, time, absorption);
-        }
-
-        public float GetArialAdjustments()
-        {
-            return Floating.Lift;
-        }
-        public void ApplyFireDamage()
-        {
-            if (FireDamage.Count > 0)
-            {
-                //Debug.Log($"Fire instances: {FireDamage.Count}");
-                float totalDamage = 0;
-
-                for (int i = FireDamage.Count - 1; i >= 0; i--)
+                if (attribute.Length <= 0) return;
+                for (int i = 0; i < attribute.Length; i++)
                 {
-                    if (FireDamage[i].HasExpired())
+                    ApplyAttribute(attribute[i].Attributes, attribute[i].Strength, attribute[i].Time, attribute[i].Option);
+                    if (attribute[i].GetOtherEffects() != null)
                     {
-                        Debug.Log($"Removing expired fire (Time={Time.time})");
-                        FireDamage.RemoveAt(i);
-                        continue;
-                    }
-                    if (FireDamage[i].ShouldApplyDamage())
-                    {
-                        float instanceDamage = FireDamage[i].Damage;
-                        FireDamage[i].AdvanceToNextTick();
-                        totalDamage += instanceDamage;
-                    }
-                }
-
-                if (totalDamage > 0)
-                {
-                    Health.DamagePlayer(totalDamage, WeaponClass.Magic, false);
-                }
-            }
-        }
-        // In your healing system
-        public void ApplyRegeneration()
-        {
-            if (ActiveRegenerations.Count > 0)
-            {
-                //Debug.Log($"Regen instances: {FireDamage.Count}");
-                float totalDamage = 0;
-
-                for (int i = ActiveRegenerations.Count - 1; i >= 0; i--)
-                {
-                    if (ActiveRegenerations[i].HasExpired())
-                    {
-                        Debug.Log($"Removing expired regen (Time={Time.time})");
-                        ActiveRegenerations.RemoveAt(i);
-                        continue;
-                    }
-                    if (ActiveRegenerations[i].ShouldApplyDamage())
-                    {
-                        float instanceDamage = ActiveRegenerations[i].HealthPerTick;
-                        ActiveRegenerations[i].AdvanceToNextTick();
-                        totalDamage += instanceDamage;
-                    }
-                    Debug.Log($"Regen amount: {totalDamage})");
-                }
-
-                if (totalDamage > 0)
-                {
-                    Health.Heal(totalDamage);
-                }
-            }
-        }
-        public void ApplyFlytation()
-        {
-            Gravity = Floating.ResetGravity(GravityBase);
-        }
-        public void ApplyCrying()
-        {
-            CryingAim = 0;
-            if (Cryings.Count > 0)
-            {
-                for (int i = 0; i < Cryings.Count; i++)
-                {
-                    if (Cryings[i].GetExistTime())
-                    {
-                        Cryings.RemoveAt(i);
-                    }
-                    else
-                    {
-                        CryingAim += Cryings[i].GetInaccuracy();
+                        for (int j = 0; j < attribute[i].GetOtherEffects().Length; j++)
+                        {
+                            ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(attribute[i].GetOtherEffects()));
+                        }
                     }
                 }
             }
-        }
-        public void ApplyWounded()
-        {
+            public virtual void ApplyAttribute(AttributesTemplete attribute)
+            {
+                ApplyAttribute(attribute.GetAttriStruct());
+            }
+            public virtual void ApplyAttribute(List<AttributesTemplete> attribute)
+            {
+                if (attribute.Count <= 0) return;
+                for (int i = 0; i < attribute.Count; i++)
+                {
+                    ApplyAttribute(attribute[i].GetAttriStruct());
+                }
+            }
+            public virtual void ApplyAttribute(AttributesTemplete[] attribute)
+            {
+                if (attribute.Length <= 0) return;
+                for (int i = 0; i < attribute.Length; i++)
+                {
+                    ApplyAttribute(attribute[i].GetAttriStruct());
+                }
+            }
+            /// <summary>
+            /// Apply attributes
+            /// </summary>
+            /// <param name="attributes">the attribute</param>
+            /// <param name="strength">How strong the attribute is</param>
+            /// <param name="time">How long it lasts</param>
+            /// <param name="options">Usually contains tick rate, but sometimes contains addiotnal option such as Lift value in Floataitons</param>
+            public virtual void ApplyAttribute(List<Attributes> attributes, List<float> strength, List<float> time, List<float> options)
+            {
+                if (attributes.Count <= 0) return;
+                for (int i = 0; i < attributes.Count; i++)
+                {
+                    ApplyAttribute(attributes[i], strength[i], time[i], options[i]);
+                }
+            }
+            public virtual void ApplyAttribute(Attributes attributes, float strength, float time, float options)
+            {
+                Debug.Log($"Attributes: {attributes}, Stength: {strength}, Time: {time}, Options: {options}");
+                if (attributes == Attributes.Poison)
+                {
+                    SetFireDamage(strength, time, options);
+                }
+                if (attributes == Attributes.Flytation)
+                {
+                    SetFlyatation(strength, time, options);
+                }
+                if (attributes == Attributes.Regeneration)
+                {
+                    SetRegeneration(strength, time, options);
+                }
+                if (attributes == Attributes.Crying)
+                {
+                    SetCrying(strength, time, options);
+                }
+                if (attributes == Attributes.Wounded)
+                {
+                    SetWounded(strength, time, options);
+                }
+                if (attributes == Attributes.Speed)
+                {
+                    SpeedBonus.SetAdjustment(strength, time);
+                }
+                if (attributes == Attributes.Jump)
+                {
+                    JumpBonus.SetAdjustment(strength, time);
+                }
+            }
+            /// <summary>
+            /// Progress attribtues to the next phase of the game.
+            /// </summary>
+            protected void SetFireDamage(float damage, float time, float tickRate)
+            {
+                FireDamage.Add(new FireDamage(damage, time, tickRate));
+            }
+            protected void SetFlyatation(float strength, float time, float lift)
+            {
+                Floating.SetupFloatation(strength, time, lift);
+                Gravity = Floating.ResetGravity(GravityBase);
+            }
+            protected void SetRegeneration(float health, float time, float tickRate)
+            {
+                ActiveRegenerations.Add(new Regeneration(health, time, tickRate));
+            }
+            protected void SetCrying(float strength, float time, float speedInc)
+            {
+                Cryings.Add(new Crying(strength, time, speedInc));
+            }
+            protected void SetWounded(float resistance, float time, float absorption)
+            {
+                Wound.SetupResistance(resistance, time, absorption);
+            }
 
-        }
-        public bool GetIsRegeenrating()
-        {
-            return ActiveRegenerations.Count > 0;
-        }
-        /// <summary>
-        /// Apply stats from adjustments
-        /// </summary>
-        public void ApplyStatAdjustments()
-        {
-            SpeedBonus.CheckTime();
-            JumpBonus.CheckTime();
-            GroundPoundBonus.CheckTime();
-            VisionAdjustment.CheckTime();
-            WeightAdjustment.CheckTime();
-            AimAdjustment.CheckTime();
+            public float GetArialAdjustments()
+            {
+                return Floating.Lift;
+            }
+            public void ApplyFireDamage()
+            {
+                if (FireDamage.Count > 0)
+                {
+                    //Debug.Log($"Fire instances: {FireDamage.Count}");
+                    float totalDamage = 0;
 
+                    for (int i = FireDamage.Count - 1; i >= 0; i--)
+                    {
+                        if (FireDamage[i].HasExpired())
+                        {
+                            Debug.Log($"Removing expired fire (Time={Time.time})");
+                            FireDamage.RemoveAt(i);
+                            continue;
+                        }
+                        if (FireDamage[i].ShouldApplyDamage())
+                        {
+                            float instanceDamage = FireDamage[i].Damage;
+                            FireDamage[i].AdvanceToNextTick();
+                            totalDamage += instanceDamage;
+                        }
+                    }
+
+                    if (totalDamage > 0)
+                    {
+                        Health.DamagePlayer(totalDamage, WeaponClass.Magic, false);
+                    }
+                }
+            }
+            // In your healing system
+            public void ApplyRegeneration()
+            {
+                if (ActiveRegenerations.Count > 0)
+                {
+                    //Debug.Log($"Regen instances: {FireDamage.Count}");
+                    float totalDamage = 0;
+
+                    for (int i = ActiveRegenerations.Count - 1; i >= 0; i--)
+                    {
+                        if (ActiveRegenerations[i].HasExpired())
+                        {
+                            Debug.Log($"Removing expired regen (Time={Time.time})");
+                            ActiveRegenerations.RemoveAt(i);
+                            continue;
+                        }
+                        if (ActiveRegenerations[i].ShouldApplyDamage())
+                        {
+                            float instanceDamage = ActiveRegenerations[i].HealthPerTick;
+                            ActiveRegenerations[i].AdvanceToNextTick();
+                            totalDamage += instanceDamage;
+                        }
+                        Debug.Log($"Regen amount: {totalDamage})");
+                    }
+
+                    if (totalDamage > 0)
+                    {
+                        Health.Heal(totalDamage);
+                    }
+                }
+            }
+            public void ApplyFlytation()
+            {
+                Gravity = Floating.ResetGravity(GravityBase);
+            }
+            public void ApplyCrying()
+            {
+                CryingAim = 0;
+                if (Cryings.Count > 0)
+                {
+                    for (int i = 0; i < Cryings.Count; i++)
+                    {
+                        if (Cryings[i].GetExistTime())
+                        {
+                            Cryings.RemoveAt(i);
+                        }
+                        else
+                        {
+                            CryingAim += Cryings[i].GetInaccuracy();
+                        }
+                    }
+                }
+            }
+            public void ApplyWounded()
+            {
+
+            }
+            public bool GetIsRegeenrating()
+            {
+                return ActiveRegenerations.Count > 0;
+            }
+            /// <summary>
+            /// Apply stats from adjustments
+            /// </summary>
+            public void ApplyStatAdjustments()
+            {
+                SpeedBonus.CheckTime();
+                JumpBonus.CheckTime();
+                GroundPoundBonus.CheckTime();
+                VisionAdjustment.CheckTime();
+                WeightAdjustment.CheckTime();
+                AimAdjustment.CheckTime();
+
+            }
+            #endregion
         }
-        #endregion
-        #region Leveling
-        public void IncrimentLevel(Stat stat)
+        public class Character : INameDescSet
         {
-            stat.Level = stat.Level + 1;
+            public Texture Icon { get; private set; }
+            public MovingSystemKeyboard MoveSys { get; private set; }
+            public GRDPound Gpound { get; private set; }
+            public JumpSystem JumpSys { get; private set; }
+            public AirMovement AirMent { get; private set; }
+            public float BaseWeight { get; private set; }
+            public float JUMPDELAY { get; private set; }
+            internal Player Player { get; private set; }
+            public Character(Classes defaultOption)
+            {
+                SwitchCharacter(defaultOption);
+            }
+            public Character()
+            {
+            }
+            public Character(Player player, MovingSystemKeyboard moveSys, GRDPound gpound, JumpSystem jumpSystem, AirMovement airMent, float baseWeight, float jumpDelay)
+            {
+                Player = player;
+                MoveSys = moveSys;
+                Gpound = gpound;
+                JumpSys = jumpSystem;
+                AirMent = airMent;
+                BaseWeight = baseWeight;
+                JUMPDELAY = jumpDelay;
+            }
+            public Character(Player player, MovingSystemKeyboard moveSys, GRDPound gpound, JumpSystem jumpSystem, AirMovement airMent, float baseWeight, float jumpDelay, Texture icon)
+            {
+                Player = player;
+                MoveSys = moveSys;
+                Gpound = gpound;
+                JumpSys = jumpSystem;
+                AirMent = airMent;
+                BaseWeight = baseWeight;
+                JUMPDELAY = jumpDelay;
+                Icon = icon;
+            }
+            public Character(Character other)
+            {
+                MoveSys = other.MoveSys;
+                Gpound = other.Gpound;
+                JumpSys = other.JumpSys;
+                AirMent = other.AirMent;
+                BaseWeight = other.BaseWeight;
+                JUMPDELAY = other.JUMPDELAY;
+                try
+                {
+                    Player = new Player(other.Player,Player);
+                }
+                catch(NullReferenceException e)
+                {
+                    Debug.LogException(e);
+                }
+                catch(ArgumentException e)
+                {
+                    Debug.LogException(e);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+            internal void SetPlayer(Player player)
+            {
+                Player = player;
+            }
+            public void SwitchCharacter(Classes classToPlay)
+            {
+                switch (classToPlay)
+                {
+                    case Classes.Vampire:
+                        MoveSys = new MovingSystemKeyboard(0.05f, 0.5f, 0.8f, 1.05f, 0.38f, 0.35f);
+                        JumpSys = new JumpSystem(3, 1, 0.35f);
+                        Gpound = new GRDPound(1);
+                        AirMent = new AirMovement(1.285f, 0.65f, 0.186f, 0.8f, 1f);
+                        JUMPDELAY = 0.128f;
+                        BaseWeight = 5200;
+                        break;
+                    case Classes.Bird:
+                        MoveSys = new MovingSystemKeyboard(0.16f, 2f, 0.7f, 1.05f, 0.5f, 0.2f);
+                        JumpSys = new JumpSystem(1, 1, 0.35f);
+                        Gpound = new GRDPound(1);
+                        AirMent = new AirMovement(1.45f, 0.4f, 0.186f, 5f, 0.3f);
+                        JUMPDELAY = 0.124f;
+                        BaseWeight = 5000;
+                        break;
+                    case Classes.LeatherBird:
+                        MoveSys = new MovingSystemKeyboard(0.16f, 2f, 0.7f, 1.05f, 0.5f, 0.2f);
+                        JumpSys = new JumpSystem(1, 1, 2f);
+                        Gpound = new GRDPound(1);
+                        AirMent = new AirMovement(1.55f, 0.4f, 0.186f, 5f, 0.4f);
+                        JUMPDELAY = 0.124f;
+                        BaseWeight = 5700;
+                        break;
+                    case Classes.Elf:
+                        MoveSys = new MovingSystemKeyboard(0.16f, 0.5f, 0.6f, 1.05f, 0.25f, 0.25f);
+                        JumpSys = new JumpSystem(1, 0, 0f);
+                        Gpound = new GRDPound(1);
+                        AirMent = new AirMovement(2f, 1f, 0.186f, 0.5f, 0.2f);
+                        JUMPDELAY = 0.128f;
+                        BaseWeight = 5100;
+                        break;
+                    case Classes.Human:
+                        MoveSys = new MovingSystemKeyboard(0.16f, 0.5f, 0.7f, 1.05f, 0.1f, 0.15f);
+                        JumpSys = new JumpSystem(2, 0, 0f);
+                        Gpound = new GRDPound(1);
+                        AirMent = new AirMovement(1f, 0.65f, 0.186f);
+                        JUMPDELAY = 0.128f;
+                        BaseWeight = 5500;
+                        break;
+                    case Classes.None:
+                        break;
+                    default:
+                        return;
+                }
+                
+            }
+
+            public string GetName()
+            {
+                return ((INameDesc)Player).GetName();
+            }
+
+            public string GetDesc()
+            {
+                return ((INameDesc)Player).GetDesc();
+            }
+
+            public bool GetName(string name)
+            {
+                return ((INameDesc)Player).GetName(name);
+            }
+
+            public bool GetDesc(string name)
+            {
+                return ((INameDesc)Player).GetDesc(name);
+            }
+            public void SetDescription(string desc)
+            {
+                ((INameDescSet)Player).SetDescription(desc);
+            }
         }
+        public abstract class GroupOfStats : InventorySystem
+        {
+            protected GroupOfStats()
+            {
 
+            }
 
-        #endregion
+            public StatHealth Health { get; protected set; }
+            /// <summary>
+            /// Your base Speed on spawn
+            /// </summary>
+            public Stat SpeedBase { get; protected set; }
+            /// <summary>
+            /// Your current speed
+            /// </summary>
+            public float Speed
+            {
+                get
+                {
+                    return SpeedBase.Max * SpeedBonus.Strength;
+                }
+            }
+            /// <summary>
+            /// Your bonus speed from external items such as speed boosts or powerups
+            /// </summary>
+            protected StatAdjustment SpeedBonus { get; set; } = new StatAdjustment();
+            public Stat GroundPoundBase { get; protected set; }
+            protected StatAdjustment GroundPoundBonus { get; set; } = new StatAdjustment();
+            /// <summary>
+            /// Your Jump on game start
+            /// </summary>
+            public Stat JumpBase { get; protected set; }
+            /// <summary>
+            /// Your bonus jump from external items such as jump boots or powerups
+            /// </summary>
+            protected StatAdjustment JumpBonus { get; set; } = new StatAdjustment();
+            /// <summary>
+            /// Your current Jump
+            /// </summary>
+            public float Jump
+            {
+                get
+                {
+                    return JumpBase.Max * JumpBonus.Strength;
+                }
+            }
+            public float GroundPound
+            {
+                get
+                {
+                    return GroundPoundBase.Max * GroundPoundBonus.Strength;
+                }
+            }
+            public float WeightBase { get; protected set; }
+            /// <summary>
+            /// Adjusting weight due to items, armor, effects, etc...
+            /// </summary>
+            protected StatAdjustment WeightAdjustment { get; set; } = new StatAdjustment();
+            /// <summary>
+            /// Your base vision at spawn
+            /// </summary>
+            public Stat VisionBase { get; protected set; }
+            public StatAdjustment VisionAdjustment { get; protected set; } = new StatAdjustment();
+            public Stat Aim { get; protected set; }
+            public StatAdjustment AimAdjustment { get; protected set; } = new StatAdjustment();
+            /// <summary>
+            /// Interaction range from enemies and also effects how stealthy you are.
+            /// </summary>
+            public float Vision
+            {
+                get
+                {
+                    return VisionBase.Max * VisionAdjustment.Strength;
+                }
+            }
+            /// <summary>
+            /// Interaction range.
+            /// </summary>
+            protected float Reach { get; set; }
+            protected float[] Resistances { get; set; } = new float[Enum.GetValues(typeof(WeaponClass)).Length];
+            public int GameLevel
+            {
+                get
+                {
+                    return level;
+                }
+                protected set
+                {
+                    level = value;
+                    Health.Level = value;
+                    SpeedBase.Level = value;
+                    JumpBase.Level = value;
+                    VisionBase.Level = value;
+                    GroundPoundBase.Level = value;
+                    Aim.Level = value;
+                }
+            }
+            private int level;
+            public void SetupStats(StatHealth health, Stat speed, Stat jump, Stat groundPound, Stat vision, Stat aim)
+            {
+                Health = new StatHealth(health);
+                SpeedBase = new Stat(speed);
+                JumpBase = new Stat(jump);
+                GroundPoundBase = new Stat(groundPound);
+                VisionBase = new Stat(vision);
+                Aim = new Stat(aim);
+            }
+
+            #region Reach
+            /// <summary>
+            /// The range you can interact with objects in a raidus
+            /// </summary>
+            /// <param name="range">new range</param>
+            public void SetReachRange(float range)
+            {
+                Reach = range;
+            }
+            public float GetReach()
+            {
+                return Reach;
+            }
+            #endregion
+            #region Resistances
+            public void SetupResistance(WeaponClass wpnclass, float value)
+            {
+                Health.SetResistance(wpnclass, value);
+            }
+            public void SetupResistances(params (WeaponClass, float)[] resistances)
+            {
+                for (int i = 0; i < resistances.Length; i++)
+                {
+                    Health.SetResistance(resistances[i].Item1, resistances[i].Item2);
+                }
+            }
+            public float[] GetResistances()
+            {
+                return Resistances;
+            }
+            #endregion
+            #region Movement
+            public void SetupMovement(float speed, float jump, float groundPound)
+            {
+                SpeedBase = new Stat("Speed", speed, 5, 0);
+                JumpBase = new Stat("Jump", jump, 0.5f, 0);
+                GroundPoundBase = new Stat("Gpound", groundPound, 30, 0);
+            }
+            public float GetSpeedBase()
+            {
+                return SpeedBase.Max;
+            }
+            public float GetGroundPound(bool baseValue)
+            {
+                if (baseValue)
+                {
+                    return GroundPoundBase.Max;
+                }
+                return GroundPound;
+            }
+            #endregion
+        }
     }
-    public class LevelSys
-    {
 
-    }
     /// <summary>
     /// Create an animation class that contains <see cref="Texture[]"/>[], <see cref="AnimationType"/>[], <see cref="CutPoints"/>
     /// </summary>
@@ -7740,15 +8263,18 @@ namespace BaseCharacter
         #endregion
     }
     /// <summary>
-    /// Holds Several common methods.
+    /// Holds generic methods and some readonly values.
     /// <list type="bullet">
     /// <item>Scene methods: <see cref="GetCurrentSceneName()"/> and <see cref="ReloadCurrentScene()"/></item>
-    /// <item>Array methods: <see cref="ArrayRandomReadjustment{T}(T[])"/> <see cref="ArrayRandomReadjustment{T}(List{T})"/>, <see cref="CompareArray{T}(T[], T)"/> and <see cref="ResizeArray{T}(T[], int)"/></item>
+    /// <item>Array methods: <see cref="ArrayRandomReadjustment{T}(T[])"/>, <see cref="ArrayRandomReadjustment{T}(List{T})"/>, <see cref="CompareArray{T}(T[], T)"/> and <see cref="ResizeArray{T}(T[], int)"/></item>
     /// <item>Mesc methods: <see cref="GetAllGameObjects(GameObject)"/> and <see cref="RandomValue(int)"/></item>
+    /// <item>Readonly: <see cref="charsToTrim"/></item>
     /// </list>
     /// </summary>
     public static class Methods
     {
+        public static readonly char[] charsToTrim = { ' ', '\b', '\'', '\"', '\n', '\t', '\r' };
+        
         /// <summary>
         /// Gets the name of the current scene.
         /// </summary>
@@ -7910,29 +8436,48 @@ namespace BaseCharacter
         /// </summary>
         public class Stat : INameDesc
         {
+            /// <summary>
+            /// Name of the stat.
+            /// </summary>
             private readonly string name;
+            /// <summary>
+            /// A desc of it.
+            /// </summary>
             private string desc = string.Empty;
-            public float Max { get; protected set; }
+            /// <summary>
+            /// The max value of the stat. 
+            /// <code>
+            /// Max = level * increasePerLevel + Level1Stat;
+            /// </code>
+            /// </summary>
+            public float Max { get; private set; }
+            /// <summary>
+            /// The level of your character. <br></br>
+            /// <h1>IMPORTANT</h1>
+            /// <see cref="Max"/> is set by using this property
+            /// </summary>
             public int Level
             {
                 get
                 {
-                    return Mathf.RoundToInt((Max / increasePerLevel) - Level1Stat);
+                    return level;
                 }
                 set
                 {
                     Max = value * increasePerLevel + Level1Stat;
+                    level = value;
                     desc = $"{name}: Value: {Max}, Level: {Level}";
                 }
             }
-            private float increasePerLevel;
+            private int level;
+            private readonly float increasePerLevel;
             public float Level1Stat { get; private set; }
 
             public Stat()
             {
 
             }
-            public Stat(string name, float level1Stat, int increasePerLevel)
+            public Stat(string name, float level1Stat, float increasePerLevel)
             {
                 this.increasePerLevel = increasePerLevel;
                 this.name = name;
@@ -7947,6 +8492,44 @@ namespace BaseCharacter
                 this.Level1Stat = level1Stat;
                 Level = currentLevel;
                 desc = $"{name}: Value: {Max}, Level: {Level}";
+            }
+            public Stat(Stat other)
+            {
+                this.level = other.level;
+                this.name = other.name;
+                this.increasePerLevel = other.increasePerLevel;
+                this.Level1Stat = other.Level1Stat;
+                this.desc = other.desc;
+                this.Max = other.Max;
+            }
+            public Stat(Stat other, float level1Stat, float increasePerLevel)
+            {
+                this.level = other.level;
+                this.name = other.name;
+                this.increasePerLevel = increasePerLevel;
+                this.Level1Stat = level1Stat;
+                this.desc = other.desc;
+                this.Level = other.level;
+                desc = $"{name}: Value: {Max}, Level: {Level}";
+            }
+            public Stat(Stat other, float level1Stat, float increasePerLevel, int newLevel)
+            {
+                this.level = newLevel;
+                this.name = other.name;
+                this.increasePerLevel = increasePerLevel;
+                this.Level1Stat = level1Stat;
+                this.desc = other.desc;
+                this.Level = newLevel;
+                desc = $"{name}: Value: {Max}, Level: {Level}";
+            }
+            public Stat(Stat other, int level)
+            {
+                this.level = level;
+                this.name = other.name;
+                this.increasePerLevel = other.increasePerLevel;
+                this.Level1Stat = other.Level1Stat;
+                this.desc = other.desc;
+                this.Max = other.Max;
             }
             public string GetName()
             {
@@ -7981,7 +8564,7 @@ namespace BaseCharacter
             /// <code>
             /// get
             /// {
-            ///     return <see cref="current"/>
+            ///     return <see cref="current"/><br></br>
             /// }
             /// set
             /// {
@@ -8027,9 +8610,34 @@ namespace BaseCharacter
             /// <param name="increasePerLevel">Increase per level.</param>
             /// <param name="currentLevel">Current level</param>
             /// <param name="currentValue">Current value</param>
-            public StatHealth(string name, int level1Stat, int increasePerLevel, int currentLevel, float currentValue) : base(name, level1Stat, increasePerLevel, currentLevel)
+            public StatHealth(string name, int level1Stat, float increasePerLevel, float currentValue, int currentLevel) : base(name, level1Stat, increasePerLevel, currentLevel)
             {
                 Current = currentValue;
+            }
+            public StatHealth(string name, int level1Stat, float increasePerLevel, float currentValue) : base(name, level1Stat, increasePerLevel)
+            {
+                Current = currentValue;
+            }
+            /// <summary>
+            /// Setup Health Stat
+            /// </summary>
+            public StatHealth(StatHealth statHeatlh) : base((Stat)statHeatlh)
+            {
+                Current = statHeatlh.Current;
+                Resistances = statHeatlh.Resistances;
+            }
+            /// <summary>
+            /// Setup Health Stat
+            /// </summary>
+            /// <param name="name">Name of stat</param>
+            /// <param name="level1Stat">Value at level 1</param>
+            /// <param name="increasePerLevel">Increase per level.</param>
+            /// <param name="currentLevel">Current level</param>
+            /// <param name="currentValue">Current value</param>
+            public StatHealth(StatHealth statHeatlh, float level1Stat, float increasePerLevel) : base((Stat)statHeatlh, level1Stat,increasePerLevel)
+            {
+                Current = statHeatlh.Current;
+                Resistances = statHeatlh.Resistances;
             }
             /// <summary>
             /// Setup each invidual resistance
@@ -8039,6 +8647,29 @@ namespace BaseCharacter
             public void SetResistance(WeaponClass wpn, float amount)
             {
                 Resistances[(int)wpn] = amount;
+            }
+            /// <summary>
+            /// Setup each invidual resistance
+            /// </summary>
+            /// <param name="wpn">Resistance</param>
+            /// <param name="amount">Amount</param>
+            public void SetResistance(WeaponClass[] wpn, float[] amount)
+            {
+                if (amount.Length < 1 || wpn.Length < 1 || amount == null || wpn == null)
+                {
+                    throw new ArgumentException("A arguement was null or empty.");
+                }
+                for (int i = 0;  i < Resistances.Length; i++)
+                {
+                    try
+                    {
+                        SetResistance(wpn[i], amount[i]);
+                    }
+                    catch (Exception e) 
+                    {
+                        Debug.LogAssertion(e);
+                    }
+                }
             }
             /// <summary>
             /// Damage a player and bypass resistances.
@@ -8223,6 +8854,11 @@ namespace BaseCharacter
                 EndTime = 0f;
                 hasStarted = false;
             }
+            public StatAdjustment() { }
         }
+        /// <summary>
+        /// Used to seperate some values from the <see cref="Player"/> class. GroupOfStats should not be used otherwise.
+        /// </summary>
+        
     }
 }

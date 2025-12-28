@@ -37,7 +37,7 @@ public class Enums
         Rewarded        // Completed and rewarded
     }
     /// <summary>
-    /// Enemy Algorithm based off of Vision.
+    /// Entities Algorithm based off of Vision.
     /// </summary>
     public enum VisionType
     {
@@ -257,27 +257,78 @@ public class Enums
         InventoryItem = 7,
         Entities = 8,
         Quests = 9,
+        Character = 10,
+    }
+    public enum SwitchFromTo
+    {
+        None,
+        Character,
+        Inventory,
     }
     public enum RegexSearchType
     {
         None = 0,
         Copy,
+        /// <summary>
+        /// Whisper a message to a player
+        /// </summary>
         Whisper,
+        /// <summary>
+        /// Default settings
+        /// </summary>
         Default,
+        /// <summary>
+        /// Clear items in a inventory
+        /// </summary>
         Clear = 4,
+        /// <summary>
+        /// Give things from the <see cref="AllLibary.Libary"/>.
+        /// </summary>
         Give = 5,
         //unused commands, only used for /help
         AttributeTemplete = 6,
         InventoryItem = 7,
         Entities = 8,
         Quests = 9,
+        LibaryObjects = 10,
+        Character = 11,
         //End of unused Commands
-        New = 10,
+        New,
+        /// <summary>
+        /// Force a <see cref="BaseCharacter.Entities.Player"/> to jump
+        /// </summary>
         Jump,
+        /// <summary>
+        /// List all possible usable things in the <see cref="AllLibary.Libary"/>
+        /// </summary>
         List,
+        /// <summary>
+        /// Help with commands
+        /// </summary>
         Help,
+        /// <summary>
+        /// Cause somthing to die.
+        /// </summary>
         Die,
-
+        /// <summary>
+        /// Max out the amount of items currently in a <see cref="BaseCharacter.Items.InventorySystem"/>
+        /// </summary>
+        Max,
+        /// <summary>
+        /// Switch libary objects of 2 entities.
+        /// </summary>
+        Switch,
+        Order,
+    }
+    public enum RegexOrderItems
+    {
+        KeepAsIs,
+        Name,
+        Type,
+        Price,
+        Size,
+        Weight,
+        Amount
     }
     public enum RegexModifier
     {
@@ -474,23 +525,13 @@ public class Enums
     public enum Classes
     {
         None,
-        Scout,
-        Hurler,
-        Sniper,
-        Golem,
-        Assassin,
-        Flyer,
         Vampire,
-        RPG,
+        Bird,
+        LeatherBird,
+        Elf,
+        Human,
+
     }
-    public static void SetClassPreGame(Classes classes)
-    {
-        gameClass = classes;
-    }
-    /// <summary>
-    /// Game class
-    /// </summary>
-    static Classes gameClass = Classes.Flyer;
     #endregion
     #region Speedrun
     public static float? SpeedRunTime { get; private set; }

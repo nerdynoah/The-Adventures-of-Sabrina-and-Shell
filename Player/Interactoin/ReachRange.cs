@@ -1,10 +1,8 @@
-using BaseCharacter;
 using BaseCharacter.Items;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using static Enums;
-using static UnityEditor.Progress;
 /// <summary>
 /// The reach range for interactions via pressing 'E' in most games.
 /// </summary>
@@ -18,6 +16,8 @@ public class ReachRange : MonoBehaviour
     private float Reach { get; set; }
     private float Interaction { get; set; }
     private string TagName { get; set; }
+    private float crossHairReach;
+    public float CrossHairReach { get { return crossHairReach; } set { crossHairReach = Mathf.Max(Reach, value); } }
     /// <summary>
     /// Sets the value of Reach + Sets the radius of your reach.
     /// </summary>
@@ -72,7 +72,7 @@ public class ReachRange : MonoBehaviour
             if (!item.Contains(inv))
             {
                 item.Add(inv);
-                Debug.Log(inv.GetInventoryItem(false).GetName());
+                //Debug.Log(inv.GetInventoryItem(false).GetName()); //I am unable to run this line of code... BUT, when I pick up the item, I get the full item back data and all wtf is wrong is programming why do we do this.
             }
         }
     }
@@ -83,6 +83,7 @@ public class ReachRange : MonoBehaviour
     /// <returns>If returns false, then the inventory was full.</returns>
     public InventoryAddReturn AddItems(InventorySystem inventorySystem)
     {
+        
         if (item.Count == 0)
             return InventoryAddReturn.NothingToAdd;
 

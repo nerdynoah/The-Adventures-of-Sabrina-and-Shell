@@ -1,4 +1,4 @@
-using BaseCharacter;
+using BaseCharacter.Entities;
 using BaseCharacter.Items;
 using BaseCharacter.Structual;
 using System;

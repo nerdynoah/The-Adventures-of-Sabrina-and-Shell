@@ -33,10 +33,12 @@ public class Movement : MonoBehaviour
     private float MaxVert = 90.0f;
     private float VerticalRot = 0;
     private bool CanMoveMouse = true;
+    private bool canMoveCamera = true;
     private KeyCode CameraKey = KeyCode.C;
     private Vector3 ThirdDistance;
     private float rotV;
     private float horizontalRot;
+    
 
     // Top-down rotation variables
     private bool isRotatingTopDown = false;
@@ -68,22 +70,28 @@ public class Movement : MonoBehaviour
         currentTiltX = 89f;
         UpdateTopDownPositionAndRotation();
     }
-
+    public void SetCanLook(bool canLook)
+    {
+        canMoveCamera = canLook;
+    }
     void Update()
     {
-        if (mode == CameraMode.FirstPerson)
+        if (canMoveCamera)
         {
-            HandleFirstPersonRotation();
-        }
-        else if (mode == CameraMode.TopDownPerspective)
-        {
-            HandleTopDownRotation();
-            HandleTopDownZoom();
-        }
-        if (Input.GetKey(KeyCode.Mouse2))
-        {
-            float scroll = Input.GetAxis("Mouse ScrollWheel");
-            ZoomScroll(scroll);
+            if (mode == CameraMode.FirstPerson)
+            {
+                HandleFirstPersonRotation();
+            }
+            else if (mode == CameraMode.TopDownPerspective)
+            {
+                HandleTopDownRotation();
+                HandleTopDownZoom();
+            }
+            if (Input.GetKey(KeyCode.Mouse2))
+            {
+                float scroll = Input.GetAxis("Mouse ScrollWheel");
+                ZoomScroll(scroll);
+            }
         }
     }
     public void ZoomScroll(float amount)
@@ -387,6 +395,27 @@ public class Movement : MonoBehaviour
             ogRay = GetCamera().ScreenPointToRay(ThemousePosition);
         }
         Physics.Raycast(ray, out RaycastHit hit, float.MaxValue, 10);
+        return hit;
+    }
+    public RaycastHit GetRayPoint(float rngAim, float aim, int layers)
+    {
+        Ray ray;
+        Ray ogRay;
+        Vector3 ogpoint = new Vector3(((GetCamera().pixelWidth) / 2), ((GetCamera().pixelHeight) / 2), 0.5f);
+        Vector3 point = new Vector3(ogpoint.x + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f), ogpoint.y + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f), ogpoint.z + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f));
+        Vector3 mousePosition = Input.mousePosition;
+        Vector3 ThemousePosition = new Vector3(mousePosition.x + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f), mousePosition.y + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f), mousePosition.z + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f));
+        if (GetCameraMode() == CameraMode.FirstPerson || GetCameraMode() == CameraMode.ThirdPerson)
+        {
+            ray = GetCamera().ScreenPointToRay(point);
+            ogRay = GetCamera().ScreenPointToRay(ogpoint);
+        }
+        else // TopDownPerspective
+        {
+            ray = GetCamera().ScreenPointToRay(ThemousePosition);
+            ogRay = GetCamera().ScreenPointToRay(ThemousePosition);
+        }
+        Physics.Raycast(ray, out RaycastHit hit, float.MaxValue, layers);
         return hit;
     }
 }

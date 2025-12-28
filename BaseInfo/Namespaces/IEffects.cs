@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
 using static Enums;
 using static AllLibary;
-namespace BaseCharacter.Effect
+namespace BaseCharacter.Effects
 {
     public interface IApplyEffects
     {
-        public void ApplyAttribute(Effects attribute)
+        public void ApplyAttribute(Effect attribute)
         {
             ApplyAttribute(attribute.Attributes, attribute.Strength, attribute.Time, attribute.Option);
             foreach (string search in attribute.GetOtherEffects())
@@ -17,7 +17,7 @@ namespace BaseCharacter.Effect
         {
             ApplyAttribute(attribute.GetAttributes(), attribute.GetStrength(), attribute.GetTime(), attribute.GetOption());
         }
-        public void ApplyAttribute(List<Effects> attribute)
+        public void ApplyAttribute(List<Effect> attribute)
         {
             if (attribute.Count <= 0) return;
             for (int i = 0; i < attribute.Count; i++)
@@ -25,7 +25,7 @@ namespace BaseCharacter.Effect
                 ApplyAttribute(attribute[i].Attributes, attribute[i].Strength, attribute[i].Time, attribute[i].Option);
             }
         }
-        public void ApplyAttribute(Effects[] attribute)
+        public void ApplyAttribute(Effect[] attribute)
         {
             if (attribute.Length <= 0) return;
             for (int i = 0; i < attribute.Length; i++)

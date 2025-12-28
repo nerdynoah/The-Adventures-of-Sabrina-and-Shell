@@ -1,5 +1,4 @@
-using BaseCharacter;
-using BaseCharacter.Effect;
+using BaseCharacter.Entities;
 using BaseCharacter.Structual;
 using System;
 using System.Collections;
@@ -19,7 +18,7 @@ public static class SaveData
         float extra = 0;
         List<string> inventory = new();
         List<int> amount = new();
-        //List<Effects> effects = new List<Effects>();
+        //List<Effect> effects = new List<Effect>();
         for (int i = 0; i < player.GetInventorySize(); i++)
         {
             inventory.Add(player.GetInventoryItem(i).GetName());
@@ -28,7 +27,7 @@ public static class SaveData
         var saveData = new PlayerSaveData
         {
             Name = player.Name,
-            Desc = player.Desc,
+            Desc = player.GetDesc(),
             IsAlive = true,
             Health = player.Health.GetHPInfo()[0] + extra,
             HealthBase = player.Health.GetHPInfo()[1],

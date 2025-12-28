@@ -19,7 +19,7 @@ public class WeaponTemplete : MonoBehaviour
     [SerializeField] private Vector3 sizing;
     [Header("Stats")]
     [SerializeField] private float Damage;
-    [Tooltip("Leave the Aim value above 20 to ensure when players level up, weapons don't become perfectly accurate. Every 10 Levels gives 4 AIM points")]
+    [Tooltip("Players have a minimum aim of 100.")]
     [SerializeField] private float Aim;
     [SerializeField][Min(0)] private float AttackDelay;
     [SerializeField] private int SizeOfObject;
@@ -41,7 +41,7 @@ public class WeaponTemplete : MonoBehaviour
     [Tooltip("Alter how the Projectile works. Also effects resistances.")]
     [SerializeField] private WeaponClass WeaponClass;
     [SerializeField] private ProjectileTemplete[] projectile;
-    [Header("Effects")]
+    [Header("Effect")]
     [SerializeField] private string[] FindAttributeInLibary;
     [Header("Animation")]
     [SerializeField] private Texture[] Animations;

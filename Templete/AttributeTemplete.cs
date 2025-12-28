@@ -1,4 +1,4 @@
-using BaseCharacter.Effect;
+using BaseCharacter.Effects;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -59,10 +59,10 @@ public class AttributesTemplete
         Time = time;
         Option = option;
     }
-    public Effects GetAttriStruct()
+    public Effect GetAttriStruct()
     {
         if (OtherEffects == null) 
-        { return new Effects(Name, Attributes, Strength, Time, Option); }
-        return new Effects(Name,Attributes,Strength,Time,Option, OtherEffects);
+        { return new Effect(Name, Attributes, Strength, Time, Option); }
+        return new Effect(Name,Attributes,Strength,Time,Option, OtherEffects);
     }
 }

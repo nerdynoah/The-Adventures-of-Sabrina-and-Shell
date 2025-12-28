@@ -2,8 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System;
+using static BaseCharacter.Items.BoxColors;
 using static Enums;
-public class UiDisplay : MonoBehaviour, IPointerDownHandler
+public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
     /// <summary>
     /// Where the hotbar slot is on the UI.
@@ -38,12 +39,16 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler
     [SerializeField] private ExtraMenu extraMenus;
     [SerializeField] private MsgBox count;
     private bool HasExtraMenu;
+    /*
     [SerializeField] private Color Idle;
     [SerializeField] private Color Hover;
     [SerializeField] private Color IdleSelected;
     [SerializeField] private Color HoverSelected;
-    public bool IsClickable { get; set; }
-    public bool HasLoaded { get; set; }
+    */
+    public bool IsClickable { get; private set; }
+    public bool HasLoaded { get; private set; }
+
+    private bool shouldSwap = false;
 
 
     private void Start()
@@ -62,29 +67,32 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler
         }
     }
 
-    public void SetColor(ColorChoiseInventory colorType, Color value) 
+    public void OnPointerEnter(PointerEventData eventData)
     {
-        if (colorType == ColorChoiseInventory.Idle)
+        if (IsClickable && Input.GetMouseButton(0))
         {
-            Idle = value;
+            IsClicked = true;
+            shouldSwap = true;
+            UpdateSelectionVisual();
         }
-        else if (colorType == ColorChoiseInventory.IdleSelected)
+        else if (IsClickable)
         {
-            IdleSelected = value;
-        }
-        else if (colorType == ColorChoiseInventory.Hover)
-        {
-            Hover = value;
-        }
-        else if (colorType == ColorChoiseInventory.HoverSelected)
-        {
-            HoverSelected = value;
-        }
-        else
-        {
-            Debug.LogWarning("Error, No type of ColorChoiseInventory found from SetColor(ColorChoiseInvenotry colortype, Color value)");
+            DarkenBackground();
         }
     }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        if (IsClickable)
+        {
+            UpdateSelectionVisual();
+        }
+    }
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        
+    }
+
     public void UpdateOnLoad()
     {
         if (!HasLoaded)
@@ -97,7 +105,7 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler
                 if (IsHotbar)
                 {
                     backgroundItem.gameObject.SetActive(true);
-                    slotbar.color = Idle;
+                    slotbar.color = idle;
                 }
                 HasLoaded = true;
             }
@@ -111,13 +119,17 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler
     {
         if (IsClicked)
         {
-            slotbar.color = IdleSelected;
+            slotbar.color = idleSelected;
             backgroundItem.color = new Color(1, 1, 1, 0.8f);
         }
         else
         {
             SetNotSelected();
         }
+    }
+    public void DarkenBackground()
+    {
+        slotbar.color *= new Color(0.5f, 0.5f, 0.5f);
     }
 
     /// <summary>
@@ -181,6 +193,7 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler
                 slotbar.color = Color.clear;
                 PendingItem = false;
                 IsOpen = false;
+                count.SetText("", true);
             }
         }
         catch
@@ -196,6 +209,7 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler
             slotbar.color = Color.clear;
             PendingItem = false;
             IsOpen = false;
+            count.SetText("", true);
         }
         catch
         {
@@ -212,7 +226,7 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler
             try
             {
                 backgroundItem.gameObject.SetActive(true);
-                slotbar.color = Idle;
+                slotbar.color = idle;
                 IsOpen = true;
                 SetNotSelected();
             }
@@ -343,15 +357,15 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler
             
             if (PendingItem)
             {
-                slotbar.color = IdleSelected;
+                slotbar.color = idleSelected;
             }
             else if (IsHotbar)
             {
-                slotbar.color = Idle;
+                slotbar.color = idle;
             }
             else if (IsOpen)
             {
-                slotbar.color = Idle;
+                slotbar.color = idle;
             }
         }
         catch
@@ -379,11 +393,11 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler
            
             if (PendingItem)
             {
-                slotbar.color = HoverSelected;
+                slotbar.color = hoverSelected;
             }
             else
             {
-                slotbar.color = Hover;
+                slotbar.color = hover;
             }
         }
         catch

@@ -1,17 +1,19 @@
 using BaseCharacter;
-using BaseCharacter.Enemy;
+using BaseCharacter.Entities;
 using BaseCharacter.Items;
 using BaseCharacter.Movement;
 using BaseCharacter.Structual;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Internal;
 using static Enums;
 
 public class EntityTemplete : MonoBehaviour
 {
     [Header("Entity Body")]
-    [SerializeField] private GameObject[] Body;
+    [SerializeField] private GameObject Body;
+    [SerializeField] private CapsuleCollider outline; 
     [SerializeField] private string Name;
     [SerializeField][TextArea(4,8)] private string Desc;
     [Header("Level and EXP")]
@@ -32,7 +34,7 @@ public class EntityTemplete : MonoBehaviour
     [SerializeField][Range(0.7f,0.9999f)] private float BreakingSpeed = 0.97f;
     [SerializeField][Range(0f,180f)] private float maxSlopeAngle = 79f;
     [Tooltip("100 weight = 1 KG")]
-    [SerializeField][Min(1f)] private float Weight = 1000f;
+    [SerializeField][Min(10f)] private float Weight = 1000f;
     [Header("Jumps")]
     [SerializeField] private float JumpAmount = 32f;
     [SerializeField][Min(0)] private int AllowedJumps = 1;
@@ -41,11 +43,12 @@ public class EntityTemplete : MonoBehaviour
     [Header("Gravity")]
     [SerializeField] private float GravityMultiplied = 3f;
     [SerializeField] private float GroundPound = 100f;
+    [SerializeField][Min(0)] private byte AmountOfGroundPounds = 1;
     [SerializeField] private float FallDamageProtectionTime = 1f;
     [Header("Sight and AIM")]
     [SerializeField][Min(0f)] private float Vision = 80f;
     [SerializeField][Min(0f)] private float AIM = 0f;
-    [Header("Items, Effects, and Things")]
+    [Header("Items, Effect, and Things")]
     [SerializeField] private string[] FindInventoryItemsInLibary;
     [SerializeField] private string[] FindAttributeInLibary;
     [SerializeField][Range(0, 32)] private int ExtraItemSlots;
@@ -59,10 +62,9 @@ public class EntityTemplete : MonoBehaviour
     [SerializeField] private HurtBox hurtBox;
     [SerializeField] private Rigidbody body;
     [Header("Intelligence")]
-    [SerializeField] private EnemyBrain brain;
+    [SerializeField] private FiveSenses brain;
     [SerializeField] private PathMode DefaultPathMode;
     [SerializeField] private WanderMode wanderMode;
-    [SerializeField] private FiveSenses[] inspectionModes = new FiveSenses[Enum.GetValues(typeof(FiveSenses)).Length];
     public Player player { get; private set; }
     private JumpSystem jumpSys;
     private MovingSystemKeyboard moveSys;
@@ -77,14 +79,14 @@ public class EntityTemplete : MonoBehaviour
     {
         get
         {
-            return player.GetGravity() * worldRun.Gravity;
+            return player.Gravity * worldRun.Gravity;
         }
     }
     
     public void Init()
     {
         moveSys = new MovingSystemKeyboard(0.1f, 0.6f, 0.8f, 1.05f, 0.38f, 0.35f);
-        gPound = new GRDPound(1);
+        gPound = new GRDPound(AmountOfGroundPounds);
         airMent = new AirMovement(1.285f, 0.68f, 0.185f);
         player = new(Name, Desc, MaxHealth, StartingHealthPercent, Weight, Vision, AIM, ExtraItemSlots, Adranaline);
         player.SetupMovement(Speed, JumpAmount, GroundPound, GravityMultiplied, RotationSpeed, BreakingSpeed, FallDamageProtectionTime);
@@ -112,10 +114,12 @@ public class EntityTemplete : MonoBehaviour
         }
         body.mass = player.Weight / 100f;
     }
+    protected Vector3 interestLocation;
     private void Start()
     {
         worldRun = WorldRun.Instance;
         Init();
+        interestLocation = transform.position;
     }
     private void Awake()
     {
@@ -140,7 +144,7 @@ public class EntityTemplete : MonoBehaviour
                 if (apply[i].Request == CommandRequest.Knockback)
                 {
                     body.AddForce(apply[i].Knockback.GetKnockback(player.Weight, transform.position));
-                    body.AddForce(0,apply[i].Knockback.GetRawKnockback().y,0);
+                    body.AddForce(0, apply[i].Knockback.GetYKnockback(player.Weight), 0);
                 }
             }
             hurtBox.ClearQueue();
@@ -171,13 +175,67 @@ public class EntityTemplete : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-        //Brain();
+        WanderToPoint();
+        MoveAtRandom();
     }
-    private void Brain()
+    
+    private void WanderToPoint()
     {
-        if (caughtBox.GetIsColliding())
+        if (Vector3.Distance(transform.position, interestLocation) < outline.radius + 1)
         {
-
+            interestLocation = brain.GetInFront(player.Vision);
+        }
+    }
+    private void MoveAtRandom()
+    {
+        int num = UnityEngine.Random.Range(0, 10001);
+        if (num > 100)
+        {
+            moveFoward = true;
+        }
+        else
+        {
+            moveFoward = false;
+        }
+        if (num < 300)
+        {
+            moveBackwords = true;
+        }
+        if (num > 500)
+        {
+            moveBackwords = false;
+        }
+        if (num > 8000)
+        {
+            moveLeft = true;
+        }
+        if (num < 7000)
+        {
+            moveLeft = false;
+        }
+        if (num > 6000 && num < 8000)
+        {
+            moveRight = true;
+        }
+        else if (num > 5000)
+        {
+            moveRight = false;
+        }
+        if (num > 9999)
+        {
+            moveGpound = true;
+        }
+        else
+        {
+            moveGpound = false;
+        }
+        if (num > 3000 && num < 6000)
+        {
+            moveJump = true;
+        }
+        else
+        {
+            moveJump = false;
         }
     }
     private void KeyPress()
@@ -264,38 +322,25 @@ public class EntityTemplete : MonoBehaviour
         CalculateBestFall(body.velocity.y);
 
         bool dirPressed = false;
-        if (moveLeft == true)
-        {
-            airMent.DirectionChangePress(player.GetRotationSpeed(-1));
-            dirPressed = true;
-        }
-        if (moveRight == true)
-        {
-            airMent.DirectionChangePress(player.GetRotationSpeed(1));
-            dirPressed = true;
-        }
-        if (!dirPressed)
-        {
-            airMent.DirectionalChangeNoPress(player.GetRotationSpeed(0.33f));
-        }
+        
 
         Vector3 delta = moveSys.GetSimpleMvmDeltas(isGrounded);
         Vector3 direct = transform.eulerAngles;
-        Vector3 forwardDirection = new Vector3(direct.x, 0, direct.z).normalized;
+        //Vector3 forwardDirection = new Vector3(direct.x, 0, direct.z).normalized;
         Vector3 MoveDirection = direct * delta.z + Quaternion.Euler(0, 90, 0) * direct * delta.x;
-        float horizontalMagnitude = new Vector3(body.velocity.x, 0, body.velocity.z).magnitude;
+        //float horizontalMagnitude = new Vector3(body.velocity.x, 0, body.velocity.z).magnitude;
 
         if (moveBackwords && !isGrounded)
         {
             body.velocity = new Vector3(body.velocity.x * player.BreakingSpeed, body.velocity.y, body.velocity.z * player.BreakingSpeed);
         }
-        Vector3 Speed = Time.fixedDeltaTime * player.GetSpeed() * MoveDirection;
-        Vector3 Rotation = airMent.GetDirection(1) * Speed;
+        Vector3 Speed = Time.fixedDeltaTime * player.Speed * MoveDirection;
+        Vector3 Rotation;
         body.drag = isGrounded ? airMent.GroundDrag : airMent.AirDrag;
         body.AddRelativeForce(Speed, ForceMode.VelocityChange);
         if (!isGrounded)
         {
-            body.AddRelativeForce(Rotation, ForceMode.VelocityChange);
+            //body.AddRelativeForce(Rotation, ForceMode.VelocityChange);
             TookDamage = false;
         }
         body.AddRelativeForce(new Vector3(0, Gravity, 0), ForceMode.Acceleration);
@@ -314,7 +359,7 @@ public class EntityTemplete : MonoBehaviour
     {
         if (isGrounded && !TookDamage)
         {
-            float damageProt = Gravity * gravProt - player.GroundPound - player.Jump - player.GetSpeed();
+            float damageProt = Gravity * gravProt - player.GroundPound - player.Jump - player.Speed;
             Debug.Log(-FastestFall + $"Threshold: {-damageProt}");
             float damage = Mathf.Max(-FastestFall + damageProt, 0);
             if (damage > secondaryThresh)
@@ -363,13 +408,10 @@ public class EntityTemplete : MonoBehaviour
     /// <returns></returns>
     private float Jump(bool isGrounded, float jump = 1)
     {
-        if (moveJump)
-        {
-            float value = jumpSys.Jump(isGrounded, MoveStates.OnPress);
-            jumpDelay = JUMPDELAY + Time.time;
-            return value;
-        }
-        return 0;
+        float value = jumpSys.Jump(isGrounded, MoveStates.OnPress);
+        jumpDelay = JUMPDELAY + Time.time;
+        moveJump = false;
+        return value;
     }
 
 }

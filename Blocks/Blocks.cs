@@ -14,6 +14,7 @@ public class Blocks : MonoBehaviour
     private float delay = 0;
     private bool toDestory = false;
     public float Weight { get; private set; }
+    public bool IsPickable { get; private set; } = true;
     // Start is called before the first frame update
     void Start()
     {
@@ -57,30 +58,51 @@ public class Blocks : MonoBehaviour
     {
         this.item = item;
         this.Weight = Weight;
-        try
+        IsPickable = true;
+        if (Weight < 1)
         {
-            body.mass = Mathf.Max(Weight * 10, 10);
+            try
+            {
+                body.mass = Mathf.Max(Weight * 10, 1);
+            }
+            catch (System.Exception e)
+            {
+                body = GetComponent<Rigidbody>();
+                body.mass = Mathf.Max(Weight * 10, 1);
+                Debug.LogWarning(e);
+            }
         }
-        catch (System.Exception e)
+        else
         {
-            body = GetComponent<Rigidbody>();
-            body.mass = Mathf.Max(Weight * 10, 10); 
-            Debug.LogWarning(e);
+            try
+            {
+                body.mass = Mathf.Max(Weight, 10);
+            }
+            catch (System.Exception e)
+            {
+                body = GetComponent<Rigidbody>();
+                body.mass = Mathf.Max(Weight, 10);
+                Debug.LogWarning(e);
+            }
         }
         
     }
     public InventoryItem GetInventoryItem(bool destoryItem)
     {
-        Debug.Log($"Getting item: {item.GetName()}");
-        if (!toDestory)
+        if (IsPickable)
         {
-            if (destoryItem)
+            Debug.Log($"Getting item: {item.GetName()}");
+            if (!toDestory)
             {
-                Destroy(gameObject, 0.07f);
-                toDestory = true;
+                if (destoryItem)
+                {
+                    Destroy(gameObject, 0.07f);
+                    toDestory = true;
+                    return item;
+                }
                 return item;
             }
-            return item;
+            return null;
         }
         return null;
     }

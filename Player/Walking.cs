@@ -1,4 +1,5 @@
 using BaseCharacter;
+using BaseCharacter.Entities;
 using BaseCharacter.Items;
 using BaseCharacter.Movement;
 using BaseCharacter.Structual;
@@ -29,7 +30,6 @@ public class Walking : MonoBehaviour
     [SerializeField] private GroundPoundUI scaleDown;
     [Header("MessageBoxes")]
     [SerializeField] private MsgBox Health;
-    [SerializeField] private MsgBox Money;
     [SerializeField] private MsgBox Ammo;
     [SerializeField] private MsgBox gay;
     
@@ -42,12 +42,13 @@ public class Walking : MonoBehaviour
     [SerializeField] private float groundContactOffset = 1f;
     [SerializeField] private float maxSlopeAngle = 80f;
     //Movement
-    private MovingSystemKeyboard moveSys;
-    private JumpSystem jumpSys;
-    private GRDPound gPound;
-    private AirMovement airMent;
-
-    private Player player;
+    private Character character = new Character(Classes.Vampire);
+    private MovingSystemKeyboard moveSys => character.MoveSys;
+    private JumpSystem jumpSys => character.JumpSys;
+    private GRDPound gPound => character.Gpound;
+    private AirMovement airMent => character.AirMent;
+    private Player Player { get => character.Player; set { character.SetPlayer(value); } }
+    
     private readonly float JUMPDELAY = 0.128f;
     private readonly float GAMEDELAY = 0.1f;
     private float jumpDelay;
@@ -59,7 +60,7 @@ public class Walking : MonoBehaviour
     {
         get
         {
-            return player.GetGravity() * worldRun.Gravity;
+            return Player.Gravity * worldRun.Gravity;
         }
     }
     private float FastestFall;
@@ -69,10 +70,7 @@ public class Walking : MonoBehaviour
         Debug.Log(GetSaveData);
         SlashRegex.SetChatDefaultRegexLimited(SaveData.GetDefaults());
         SaveData.GetAttributesToLibary();
-        moveSys = new MovingSystemKeyboard(0.1f,0.6f,0.8f,1.05f,0.38f,0.35f);
-        jumpSys = new JumpSystem(3, 1, 0.35f);
-        gPound = new GRDPound(1);
-        airMent = new AirMovement(1.285f,0.194f,0.186f); //Default air = 0.186f, I put ground at a slightly higher rate to encourge aireal movement.
+        
         int hotbar = 9;
         int ammo = 18;
         int shoe = 2;
@@ -87,8 +85,8 @@ public class Walking : MonoBehaviour
         {
             if (SaveData.TryLoadGame(out PlayerSaveData get))
             {
-                player = get.GetSavePlayerData();
-                player.FillNullInventory();
+                Player = get.GetSavePlayerData();
+                Player.FillNullInventory();
                 transform.position = get.Location;
 
                 List<string> names = get.Inventory;
@@ -101,7 +99,7 @@ public class Walking : MonoBehaviour
                     }
                     try
                     {
-                        player.AddItem(AllLibary.ItemLibary.SearchLibaryForTemplete(names[i]),i);
+                        Player.AddItem(AllLibary.ItemLibary.SearchLibaryForTemplete(names[i]),i);
                     }
                     catch (Exception e)
                     {
@@ -109,67 +107,69 @@ public class Walking : MonoBehaviour
                         continue;
                     }   
                 }
-                player.SetReachRange(get.Reach);
-                player.AddMoney(get.Money);
-                player.SetupMovement(get.SpeedBase, get.JumpBase, get.GroundPoundBase, get.GravityBase, get.RotationSpeedbase, get.BreakingSpeed, get.GravityProtectionTime);
+                Player.SetReachRange(get.Reach);
+                Player.DepositMoney(get.Money);
+                Player.SetupMovement(get.SpeedBase, get.JumpBase, get.GroundPoundBase, get.GravityBase, get.RotationSpeedbase, get.BreakingSpeed, get.GravityProtectionTime);
             }
             else
             {
-                player = new Player("RPG", "Super cool", 20, 1f, 5000f,30f,1f, invoSlots, 10f);
+                Player = new Player("RPG", "Super cool", 20, 1f, 4900f, 30f,1f, invoSlots, 10f);
                 (WeaponClass, float)[] resist = new(WeaponClass,float)[Enum.GetValues(typeof(WeaponClass)).Length];
                 for (int i = 0; i < resist.Length; i++)
                 {
                     resist[i].Item1 = (WeaponClass)i;
                     resist[i].Item2 = 1;
                 }
-                player.SetupResistances(resist);
-                player.SetReachRange(3);
-                player.AddMoney(500);
-                player.SetupMovement(40f, 24f, 100f, 1f, 0.4f, 0.97f, 1f);
+                Player.SetupResistances(resist);
+                Player.SetReachRange(3);
+                Player.DepositMoney(500);
+                Player.SetupMovement(40f, 24f, 100f, 1f, 0.4f, 0.97f, 1f);
             }
         }
         catch (Exception e)
         {
             Debug.LogAssertion($"An error occured whlie reading Save data: {e}");
-            player = new Player("RPG", "Super cool", 20, 1f, 5000f, 30f, 1f, invoSlots, 10f);
+            Player = new Player("RPG", "Super cool", 20, 1f, 4900f, 30f, 1f, invoSlots, 10f);
             (WeaponClass, float)[] resist = new (WeaponClass, float)[Enum.GetValues(typeof(WeaponClass)).Length];
             for (int i = 0; i < resist.Length; i++)
             {
                 resist[i].Item1 = (WeaponClass)i;
                 resist[i].Item2 = 1;
             }
-            player.SetupResistances(resist);
-            player.SetReachRange(3);
-            player.AddMoney(500);
-            player.SetupMovement(40f, 24f, 100f, 1f, 0.4f, 0.92f, 1f);
+            Player.SetupResistances(resist);
+            Player.SetReachRange(3);
+            Player.DepositMoney(500);
+            Player.SetupMovement(40f, 24f, 100f, 1f, 0.4f, 0.92f, 1f);
         }
-        player.SetupHotbar(hotbar, 0);
-        invManager.SetupInventorySize(player.GetInventorySize(), player.GetHotbarSize(), 0, 0.75f, 85f, 3, 0.135f, 50f,0.5f,80f);
-        List<int> hpInfo = player.Health.GetHPInfo();
+        Player.SetupHotbar(hotbar, 0);
+        invManager.SetupInventorySize(Player.GetInventorySize(), Player.GetHotbarSize(), 0, 0.75f, 85f, 3, 0.135f, 50f,0.5f,80f);
+        List<int> hpInfo = Player.Health.GetHPInfo();
 
         body = GetComponent<Rigidbody>();
         //UI control
         Health.SetupHealthUI(hpInfo[0], hpInfo[1], 5.2f, 9.01f);
-        //Text
-        Money.SetText(player.GetMoney(),true);
         //Bubbles
-        reaching.SetReach(player.GetReach());
-        vision.SetSize(player.Vision);
+        reaching.SetReach(Player.GetReach());
+        vision.SetSize(Player.Vision);
         SetLoadData(true);
         //Inventory
         StartSpeedRun();
 
         //UI scaling
-        scaleDown.SetupScale(Mathf.Max(Mathf.Abs(Gravity * 2f),player.GroundPoundBase.Max * 4.5f,98));
-        scaleUp.SetupScale(player.JumpBase.Max * 80f);
-        player.ScrollItem(0);
+        scaleDown.SetupScale(Mathf.Max(Mathf.Abs(Gravity * 2f),Player.GroundPoundBase.Max * 4.5f,98));
+        scaleUp.SetupScale(Player.JumpBase.Max * 80f);
+        Player.ScrollItem(0);
         // Inventory UI visuals.
-        invManager.RefreshFullInventory(player);
-        invManager.SetSelectedItem(player.GetHotbarSlot());
+        invManager.RefreshFullInventory(Player);
+        invManager.SetSelectedItem(Player.GetHotbarSlot());
         invManager.InventoryToggle();
-        invManager.RefreshFullInventory(player);
+        invManager.RefreshFullInventory(Player);
         invManager.InventoryToggle();
-        body.mass = player.Weight / 100f;
+        body.mass = Player.Weight / 100f;
+        generic.AddText("You have loaded in!\rWea are now a fish!\rYou have loaded in!\rWea are now a fish!\rYou have loaded in!\nWea are now a fish!\r", false,1,2);
+        //I want the crosshair to be able to pick items from MUCH further away, I think I'll just make a very huge value. Somthing within a average person's render distance.
+        reaching.CrossHairReach = 2000;
+        //character.SwitchCharacter(Classes.LeatherBird);
     }
     private void GetHurtBoxData()
     {
@@ -180,16 +180,16 @@ public class Walking : MonoBehaviour
             {
                 if (apply[i].Request == CommandRequest.Attributes)
                 {
-                    player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(apply[i].DataString));
+                    Player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(apply[i].DataString));
                 }
                 if (apply[i].Request == CommandRequest.Damage)
                 {
-                    player.Health.DamagePlayer(apply[i].DataFloat[0], (WeaponClass)(int)apply[i].DataFloat[1]);
+                    Player.Health.DamagePlayer(apply[i].DataFloat[0], (WeaponClass)(int)apply[i].DataFloat[1]);
                 }
                 if (apply[i].Request == CommandRequest.Knockback)
                 {
-                    body.AddForce(apply[i].Knockback.GetKnockback(player.Weight, transform.position));
-                    body.AddForce(0,apply[i].Knockback.GetRawKnockback().y,0);
+                    body.AddForce(apply[i].Knockback.GetKnockback(Player.Weight, transform.position));
+                    body.AddForce(0,apply[i].Knockback.GetYKnockback(Player.Weight),0);
                     //Debug.Log(apply[i].Knockback.GetKnockback(player.Weight, transform.position));
                 }
             }
@@ -221,34 +221,43 @@ public class Walking : MonoBehaviour
     void Update()
     {
         InInventory = invManager.GetFullInventoryOpen();
-        InventoryItem item = player.GetInventoryItemCurrentHotbar();
-        if(item.GetPassiveData(player))
+        InventoryItem item = Player.GetInventoryItemCurrentHotbar();
+        if(item.GetPassiveData(Player))
         {
             if (InInventory)
             {
-                invManager.RefreshFullInventory(player);
+                invManager.RefreshFullInventory(Player);
             }
             else
             {
-                invManager.RefreshHotbarOnly(player);
+                invManager.RefreshHotbarOnly(Player);
+            }
+        }
+        if (Input.GetKeyDown(controls.interact))
+        {
+            RaycastHit hit = movement.GetRayPoint(0, 0, 9);
+            Debug.DrawLine(transform.position, hit.point,Color.white);
+            if (!Player.GetIsFull() && hit.collider.TryGetComponent<Blocks>(out Blocks block))
+            {
+                Player.AddItem(block.GetInventoryItem(true));
             }
         }
         if (Input.GetKey(controls.interact))
         {
-            reaching.AddItems(player);
+            reaching.AddItems(Player);
         }
         if (timeGameDelay < Time.time)
         {
-            player.CheckPassive();
-            body.mass = player.Weight / 100f;
+            Player.CheckPassive();
+            body.mass = Player.Weight / 100f;
             timeGameDelay = Time.time + GAMEDELAY;
             if (InInventory)
             {
-                invManager.RefreshFullInventory(player);
+                invManager.RefreshFullInventory(Player);
             }
             else
             {
-                invManager.RefreshHotbarOnly(player);
+                invManager.RefreshHotbarOnly(Player);
             }
         }
         Ammo.SetAmmo(item);
@@ -282,17 +291,17 @@ public class Walking : MonoBehaviour
             }
         }
         Crouching(isGrounded);
-        body.AddRelativeForce(new Vector3(0, jump * player.Jump, 0), ForceMode.VelocityChange);
+        body.AddRelativeForce(new Vector3(0, jump * Player.Jump, 0), ForceMode.VelocityChange);
         scaleDown.SetScaleUI(body.velocity.y);
         if (Input.GetKey(controls.primaryFire) && !InMenu && !InInventory)
         {
             ShootHold(item,MouseClick.Left);
-            invManager.SetCount(player.GetHotbarSlot(), item.GetHeldAmountString());
+            invManager.SetCount(Player.GetHotbarSlot(), item.GetHeldAmountString());
         }
         if (Input.GetKey(controls.secondaryFire) && !InMenu && !InInventory)
         {
             ShootHold(item, MouseClick.Right);
-            invManager.SetCount(player.GetHotbarSlot(), item.GetHeldAmountString());
+            invManager.SetCount(Player.GetHotbarSlot(), item.GetHeldAmountString());
         }
         if (Input.GetKey(controls.reload) && !InMenu && !InInventory)
         {
@@ -304,16 +313,17 @@ public class Walking : MonoBehaviour
         UtilizeInventory();
         ApplyEffects();
         ChatBox();
-        Health.SetHP(player.Health.GetHPInfo()[0]);
+        Health.SetHP(Player.Health.GetHPInfo()[0]);
+
         //HpBar.HpAdjust(10f,player.GetHPInfo()[0],1f);
         
     }
     private void ApplyEffects()
     {
-        player.ApplyFireDamage();
-        player.ApplyCrying();
-        player.ApplyRegeneration();
-        player.ApplyFlytation();
+        Player.ApplyFireDamage();
+        Player.ApplyCrying();
+        Player.ApplyRegeneration();
+        Player.ApplyFlytation();
     }
     private void ChatBox()
     {
@@ -345,7 +355,7 @@ public class Walking : MonoBehaviour
         {
             //SlashRegex.GetSlashSearchType(text: chatManager.GetInputText(), matches: out MatchCollection commands);
             chatManager.GetInputText().TrimEnd();
-            SlashRegex.GetChatBoxRegex(text: chatManager.GetInputText(), inventorySize: player.GetInventorySize(), out List<string> attributes, out List<AddItemRequest> items, out List<string> msgs, out bool clear, out float jump);
+            SlashRegex.GetChatBoxRegex(text: chatManager.GetInputText(), inventorySize: Player.GetInventorySize(), out List<string> attributes, out List<AddItemRequest> items, out List<string> msgs, out bool clear, out float jump, out bool getAllItems, out bool max, out RegexOrderItems orderBy, out string charact);
             string text = string.Concat(msgs.ToArray());
             msgs.Clear();
             Debug.Log(text);
@@ -355,23 +365,36 @@ public class Walking : MonoBehaviour
             }
             if (clear)
             {
-                player.FillNullInventory();
+                Player.FillNullInventory();
             }
-            player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(attributes.ToArray()));
+            if (charact != null)
+            {
+                character = new Character(AllLibary.ItemLibary.SearchLibaryForCharacter(charact));
+            }
+            if (getAllItems)
+            {
+                Player.AddItem(AllLibary.ItemLibary.GetAllItems().ToArray());
+            }
+            Player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(attributes.ToArray()));
             for (int i = 0; i < items.Count; i++)
             {
-                player.AddItem(items[i].GetItem());
+                Player.AddItem(items[i].GetItem());
             }
             chatManager.ClearAndCloseTextBox();
             Cursor.lockState = CursorLockMode.Locked;
-            invManager.RefreshFullInventory(player);
             InMenu = false;
             chatManager.AddText(text, 2.2f);
-            body.mass = player.Weight / 100f;
+            body.mass = Player.Weight / 100f;
+            Player.OrderBy(orderBy);
+            if (max)
+            {
+                Player.MaxOutItems();
+            }
+            invManager.RefreshFullInventory(Player);
         }
         if (Input.GetKeyDown(KeyCode.Period) && !InInventory && InMenu == false)
         {
-            SaveData.SaveGame(player, new WorldLocation(Methods.GetCurrentSceneName(), transform.position));
+            SaveData.SaveGame(Player, new WorldLocation(Methods.GetCurrentSceneName(), transform.position));
         }
         if (Input.GetKeyDown(KeyCode.Comma) && !InInventory && InMenu == false)
         {
@@ -383,11 +406,11 @@ public class Walking : MonoBehaviour
         InventoryItem item;
         if (max)
         {
-            item = player.ThrowItems(player.GetHotbarSlot());
+            item = Player.ThrowItems(Player.GetHotbarSlot());
         }
         else
         {
-            item = player.ThrowItem(player.GetHotbarSlot());
+            item = Player.ThrowItem(Player.GetHotbarSlot());
         }
         if (item == null)
         {
@@ -403,29 +426,29 @@ public class Walking : MonoBehaviour
         }
         catch
         {
-
+            
         }
         thrownObject.name = $"Thrown_{item.GetName()}";
-        thrownObject.transform.SetPositionAndRotation(transform.position, transform.rotation);
+        thrownObject.transform.SetPositionAndRotation(transform.position + (playerBody.radius * 3) * transform.rotation.eulerAngles.normalized, transform.rotation);
         thrownObject.layer = 9;
         
         BoxCollider box = thrownObject.AddComponent<BoxCollider>();
         Rigidbody tempbd = thrownObject.AddComponent<Rigidbody>();
         Blocks blocks = thrownObject.AddComponent<Blocks>();
         thrownObject.AddComponent<HurtBox>();
-        box.size = player.GetInventoryItemCurrentHotbar().Size;
+        thrownObject.transform.localScale = Player.GetInventoryItemCurrentHotbar().Size;
         tempbd.freezeRotation = true;
         tempbd.collisionDetectionMode = CollisionDetectionMode.Continuous;
         try
         {
-            thrownObject.GetComponent<MeshRenderer>().material = (player.GetInventoryItemCurrentHotbar().Material);
+            thrownObject.GetComponent<MeshRenderer>().material = (Player.GetInventoryItemCurrentHotbar().Material);
         }
         catch 
         {
             
         }
         blocks.SetupBox(item, item.Weight);
-        tempbd.AddForce(transform.rotation.eulerAngles.normalized * player.GetReach() * 100 + body.velocity);
+        tempbd.AddForce(1 * transform.rotation.eulerAngles.normalized + body.velocity);
     }
     private void HotbarKeys()
     {
@@ -433,53 +456,53 @@ public class Walking : MonoBehaviour
         {
             if (Input.GetKeyDown(controls.slot1))
             {
-                player.SetHotbarSlot(0);
-                invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
+                Player.SetHotbarSlot(0);
+                invManager.SetSelectedItem(Player.GetHotbarSlot(), Player.GetInventoryItemCurrentHotbar().GetName());
             }
             if (Input.GetKeyDown(controls.slot2))
             {
-                player.SetHotbarSlot(1);
-                invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
+                Player.SetHotbarSlot(1);
+                invManager.SetSelectedItem(Player.GetHotbarSlot(), Player.GetInventoryItemCurrentHotbar().GetName());
             }
             if (Input.GetKeyDown(controls.slot3))
             {
-                player.SetHotbarSlot(2);
-                invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
+                Player.SetHotbarSlot(2);
+                invManager.SetSelectedItem(Player.GetHotbarSlot(), Player.GetInventoryItemCurrentHotbar().GetName());
             }
             if (Input.GetKeyDown(controls.slot4))
             {
-                player.SetHotbarSlot(3);
-                invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
+                Player.SetHotbarSlot(3);
+                invManager.SetSelectedItem(Player.GetHotbarSlot(), Player.GetInventoryItemCurrentHotbar().GetName());
             }
             if (Input.GetKeyDown(controls.slot5))
             {
-                player.SetHotbarSlot(4);
-                invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
+                Player.SetHotbarSlot(4);
+                invManager.SetSelectedItem(Player.GetHotbarSlot(), Player.GetInventoryItemCurrentHotbar().GetName());
             }
             if (Input.GetKeyDown(controls.slot6))
             {
-                player.SetHotbarSlot(5);
-                invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
+                Player.SetHotbarSlot(5);
+                invManager.SetSelectedItem(Player.GetHotbarSlot(), Player.GetInventoryItemCurrentHotbar().GetName());
             }
             if (Input.GetKeyDown(controls.slot7))
             {
-                player.SetHotbarSlot(6);
-                invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
+                Player.SetHotbarSlot(6);
+                invManager.SetSelectedItem(Player.GetHotbarSlot(), Player.GetInventoryItemCurrentHotbar().GetName());
             }
             if (Input.GetKeyDown(controls.slot8))
             {
-                player.SetHotbarSlot(7);
-                invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
+                Player.SetHotbarSlot(7);
+                invManager.SetSelectedItem(Player.GetHotbarSlot(), Player.GetInventoryItemCurrentHotbar().GetName());
             }
             if (Input.GetKeyDown(controls.slot9))
             {
-                player.SetHotbarSlot(8);
-                invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
+                Player.SetHotbarSlot(8);
+                invManager.SetSelectedItem(Player.GetHotbarSlot(), Player.GetInventoryItemCurrentHotbar().GetName());
             }
             if (Input.GetKeyDown(controls.slot10))
             {
-                player.SetHotbarSlot(9);
-                invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
+                Player.SetHotbarSlot(9);
+                invManager.SetSelectedItem(Player.GetHotbarSlot(), Player.GetInventoryItemCurrentHotbar().GetName());
             }
         }
     }
@@ -487,9 +510,10 @@ public class Walking : MonoBehaviour
     {
         if (Input.GetKeyDown(controls.Inventory) && InMenu == false)
         {
-            invManager.RefreshFullInventory(player);
+            invManager.RefreshFullInventory(Player);
             invManager.InventoryToggle();
             InInventory = invManager.GetFullInventoryOpen();
+            movement.SetCanLook(!InInventory);
             if (InInventory)
             {
                 Cursor.lockState = CursorLockMode.None;
@@ -501,23 +525,23 @@ public class Walking : MonoBehaviour
         }
         if (Input.GetKeyDown(controls.moveKey) && InMenu == false)
         {
-            int sel = player.GetPendingItemAndClear();
-            int hotbarslot = player.GetHotbarSlot();
+            int sel = Player.GetPendingItemAndClear();
+            int hotbarslot = Player.GetHotbarSlot();
             Debug.Log(sel + " was previously selected");
             if (sel < 0)
             {
-                player.SelectItem(hotbarslot);
+                Player.SelectItem(hotbarslot);
                 invManager.SelectItem(hotbarslot);
             }
             else
             {
                 Debug.Log($"Swapped {sel} & {hotbarslot}");
                 // Perform the actual swap
-                player.SwapItem(sel, hotbarslot);
+                Player.SwapItem(sel, hotbarslot);
                 //Update textures
                 invManager.RemoveSelectItem(hotbarslot);
-                invManager.RefreshFullInventory(player);
-                invManager.SetSelectedItem(player.GetHotbarSlot());
+                invManager.RefreshFullInventory(Player);
+                invManager.SetSelectedItem(Player.GetHotbarSlot());
             }
         }
         int?[] pend = invManager.GetPending();
@@ -531,25 +555,25 @@ public class Walking : MonoBehaviour
             swap[0] = (int)pend[0];
             swap[1] = (int)pend[1];
             Debug.Log($"Swapped {pend[0]} & {pend[1]}");
-            player.GetInventoryItem((int)pend[0]).GetIsDuplication(true, player.GetInventoryItem((int)pend[1]));
+            Player.GetInventoryItem((int)pend[0]).GetIsDuplication(true, Player.GetInventoryItem((int)pend[1]));
             // Perform the actual swap
-            player.SwapItem(swap[0], swap[1]);
+            Player.SwapItem(swap[0], swap[1]);
             //Update textures
             invManager.RemoveSelectItem(swap[0]);
             invManager.RemoveSelectItem(swap[1]);
-            invManager.RefreshFullInventory(player);
-            invManager.SetSelectedItem(player.GetHotbarSlot());
+            invManager.RefreshFullInventory(Player);
+            invManager.SetSelectedItem(Player.GetHotbarSlot());
         }
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll > 0f)
         {
-            player.ScrollItem(-1);
-            invManager.SetSelectedItem(player.GetHotbarSlot(),player.GetInventoryItemCurrentHotbar().GetName());
+            Player.ScrollItem(-1);
+            invManager.SetSelectedItem(Player.GetHotbarSlot(),Player.GetInventoryItemCurrentHotbar().GetName());
         }
         if (scroll < 0f)
         {
-            player.ScrollItem(1);
-            invManager.SetSelectedItem(player.GetHotbarSlot(), player.GetInventoryItemCurrentHotbar().GetName());
+            Player.ScrollItem(1);
+            invManager.SetSelectedItem(Player.GetHotbarSlot(), Player.GetInventoryItemCurrentHotbar().GetName());
         }
     }
     private void ShootPress(InventoryItem item)
@@ -573,12 +597,12 @@ public class Walking : MonoBehaviour
                 rockTMP.ApplyAttackDelay();
                 if (!rockTMP.UsingPattern)
                 {
-                    RaycastHit hit = movement.GetRayPoint(rockTMP, player.Aiming);
+                    RaycastHit hit = movement.GetRayPoint(rockTMP, Player.Aiming);
                     Vector3 offset = GetOffsetToSelf(rockTMP.GetProjectile((int)click).GetSize() + hurtBox.GetSize());
                     Debug.DrawLine(transform.position, hit.point, Color.blue, 6f);
                     Projectile projectile = rockTMP.GetProjectile((int)click);
                     GameObject tempBullet = Instantiate(projectile.SphereicalObject);
-                    tempBullet.GetComponent<MovingProjectile>().SetupProjectile(projectile, rockTMP.GetWeaponClass(), player.GetName());
+                    tempBullet.GetComponent<MovingProjectile>().SetupProjectile(projectile, rockTMP.GetWeaponClass(), Player.GetName());
                     tempBullet.transform.position = offset;
                     Vector3 direction = (hit.point - offset).normalized;
                     tempBullet.GetComponent<Rigidbody>().AddForce(speed * direction);
@@ -591,12 +615,12 @@ public class Walking : MonoBehaviour
                     Debug.Log("Making bullets");
                     for (int i = 0; i < pattern.Length; i++)
                     {
-                        RaycastHit hit = movement.GetRayPoint(rockTMP, player.Aiming);
-                        Vector3 offset = GetOffsetToSelf(rockTMP.GetProjectile((int)click).GetSize());
+                        RaycastHit hit = movement.GetRayPoint(rockTMP, Player.Aiming);
+                        Vector3 offset = GetOffsetToSelf(rockTMP.GetProjectile((int)click).GetSize() + hurtBox.GetSize());
                         Debug.DrawLine(offset, hit.point, Color.blue, 6f);
                         Projectile projectile = rockTMP.GetProjectile((int)click);
                         GameObject tempBullet = Instantiate(projectile.SphereicalObject);
-                        tempBullet.GetComponent<MovingProjectile>().SetupProjectile(projectile,rockTMP.GetWeaponClass(),player.GetName());
+                        tempBullet.GetComponent<MovingProjectile>().SetupProjectile(projectile, rockTMP.GetWeaponClass(), Player.GetName());
                         tempBullet.transform.position = offset;
                         Vector3 direction = (hit.point - offset).normalized;
                         tempBullet.GetComponent<Rigidbody>().AddForce(speed * direction);
@@ -709,7 +733,7 @@ public class Walking : MonoBehaviour
             // Check if we're on stable ground
             float angle = Vector3.Angle(Vector3.up, hits[i].normal);
             bool isStableOnGround = angle <= maxSlopeAngle;
-            FallDamage(isStableOnGround, player.GravityProtectionTime,100,30);
+            FallDamage(isStableOnGround, Player.GravityProtectionTime,100,30);
             return isStableOnGround;
         }
         return false;
@@ -718,13 +742,13 @@ public class Walking : MonoBehaviour
     /// <summary>
     /// Crouching
     /// </summary>
-    /// <param name="isGr+ounded"></param>
+    /// <param name="isGrounded"></param>
     private void Crouching(bool isGrounded)
     {
         if (Input.GetKeyDown(controls.crouch) && !isGrounded && gPound.CanPound() && !InMenu)
         {
             body.velocity = new Vector3(body.velocity.x,-Mathf.Abs(body.velocity.y), body.velocity.z);
-            body.AddForce(new Vector3(0,-Mathf.Abs(player.GroundPound),0),ForceMode.VelocityChange);
+            body.AddForce(new Vector3(0,-Mathf.Abs(Player.GroundPound),0),ForceMode.VelocityChange);
         }
         if (isGrounded)
         {
@@ -741,7 +765,7 @@ public class Walking : MonoBehaviour
         if (Input.GetKeyDown(controls.jump) && !InMenu)
         {
             float value = jumpSys.Jump(isGrounded, MoveStates.OnPress);
-            scaleUp.AddScaleUI(value * player.Jump * jump * Mathf.Abs(Gravity));
+            scaleUp.AddScaleUI(value * Player.Jump * jump * Mathf.Abs(Gravity));
             jumpDelay = JUMPDELAY + Time.time;
             return value;
         }
@@ -776,34 +800,44 @@ public class Walking : MonoBehaviour
         bool dirPressed = false;
         if (Input.GetKey(controls.moveLeft))
         {
-            airMent.DirectionChangePress(player.GetRotationSpeed(1));
+            airMent.DirectionChangePressX(Player.GetRotationSpeed(1));
             dirPressed = true;
         }
         if (Input.GetKey(controls.moveRight))
         {
-            airMent.DirectionChangePress(player.GetRotationSpeed(1));
+            airMent.DirectionChangePressX(Player.GetRotationSpeed(1));
             dirPressed = true;
         }
         if (!dirPressed)
         {
-            airMent.DirectionalChangeNoPress(player.GetRotationSpeed(0.33f));
+            airMent.DirectionalChangeNoPressX(Player.GetRotationSpeed(0.33f));
+        }
+        bool dirPressedZ = false;
+        if (Input.GetKey(controls.moveLeft))
+        {
+            airMent.DirectionChangePressZ(Player.GetRotationSpeed(1));
+            dirPressedZ = true;
+        }
+        if (Input.GetKey(controls.moveRight))
+        {
+            airMent.DirectionChangePressZ(Player.GetRotationSpeed(1));
+            dirPressedZ = true;
+        }
+        if (!dirPressedZ)
+        {
+            airMent.DirectionalChangeNoPressZ(Player.GetRotationSpeed(0.33f));
         }
         Vector3 delta = moveSys.GetSimpleMvmDeltas(isGrounded);
         Vector3 direct = movement.GetRotation();
         //Vector3 forwardDirection = new Vector3(direct.x, 0, direct.z).normalized;
         Vector3 MoveDirection = direct * delta.z + Quaternion.Euler(0, 90, 0) * direct * delta.x;
         //float horizontalMagnitude = new Vector3(body.velocity.x, 0, body.velocity.z).magnitude;
-        
-        if ((Input.GetKey(controls.breaking) || Input.GetKey(controls.breaking2))&& !isGrounded)
-        {
-            body.velocity = new Vector3(body.velocity.x * player.BreakingSpeed, body.velocity.y,body.velocity.z * player.BreakingSpeed) ;
-        }
         if (Input.GetKey(controls.moveDown))
         {
-            body.velocity = new Vector3(body.velocity.x * 0.98f, body.velocity.y, body.velocity.z * 0.98f);
+            body.velocity = new Vector3(body.velocity.x * 0.982f, body.velocity.y, body.velocity.z * 0.982f);
         }
-        Vector3 Speed = Time.fixedDeltaTime * player.GetSpeed() * MoveDirection;
-        Vector3 Rotation = airMent.GetDirection(1) * Speed;
+        Vector3 Speed = Time.fixedDeltaTime * Player.Speed * MoveDirection;
+        Vector3 Rotation = new Vector3(airMent.GetDirection(1).Item1 * Speed.x, Speed.y, airMent.GetDirection(2).Item2 * Speed.z);
         body.drag = isGrounded ? airMent.GroundDrag : airMent.AirDrag;
         body.AddRelativeForce(Speed, ForceMode.VelocityChange);
         if (!isGrounded)
@@ -814,7 +848,7 @@ public class Walking : MonoBehaviour
         body.AddForce(new Vector3(0, Gravity, 0),ForceMode.Acceleration);
         scaleUp.ApplyScale(Gravity);
         //Debug.Log($"Body.Velocity {body.velocity}");
-        player.ApplyStatAdjustments();
+        Player.ApplyStatAdjustments();
     }
     
     private bool TookDamage = false;
@@ -828,7 +862,7 @@ public class Walking : MonoBehaviour
     {
         if (isGrounded && !TookDamage)
         {
-            float damageProt = Gravity * gravProt - player.GroundPound - player.Jump - player.GetSpeed();
+            float damageProt = Gravity * gravProt - Player.GroundPound - Player.Jump - Player.Speed;
             Debug.Log(-FastestFall + $"Threshold: {-damageProt}");
             float damage = Mathf.Max(-FastestFall + damageProt, 0);
             if (damage > secondaryThresh)
@@ -840,7 +874,7 @@ public class Walking : MonoBehaviour
                 damage /= div;
             }
             Debug.Log(damage);
-            player.Health.DamagePlayer(damage,WeaponClass.World,false,1f);
+            Player.Health.DamagePlayer(damage,WeaponClass.World,false,1f);
             TookDamage = true;
             FastestFall = 0;
         }

@@ -1,5 +1,5 @@
 using BaseCharacter;
-using BaseCharacter.Effect;
+using BaseCharacter.Effects;
 using BaseCharacter.Movement;
 using BaseCharacter.Structual;
 using System.Collections;
@@ -38,7 +38,7 @@ public class HurtBox : MonoBehaviour
         queue.Add(new QueueInfo(id, name, priority, CommandRequest.Damage, damage, (int)wpnclass));
         return gameObject;
     }
-    public void ApplyAttributes(int id, string name, int priority, Effects[] effect)
+    public void ApplyAttributes(int id, string name, int priority, Effect[] effect)
     {
         queue.Add(new QueueInfo(id, name, priority, effect));
     }
