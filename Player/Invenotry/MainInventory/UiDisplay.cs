@@ -157,7 +157,7 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
     }
 
     /// <summary>
-    /// Setup the Invenotry when the player presses Inventory.
+    /// Setup the Invenotry when the Player presses Inventory.
     /// </summary>
     /// <param name="id"></param>
     /// <param name="position"></param>
@@ -168,7 +168,7 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
         IsHotbar = false;
     }
     /// <summary>
-    /// Setup the Invenotry when the player presses Inventory.
+    /// Setup the Invenotry when the Player presses Inventory.
     /// </summary>
     /// <param name="id"></param>
     /// <param name="position"></param>

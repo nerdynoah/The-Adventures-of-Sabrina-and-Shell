@@ -2,6 +2,7 @@ using BaseCharacter.Items;
 using BaseCharacter.Movement;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using static Enums;
 
@@ -86,6 +87,37 @@ public class MovingProjectile : MonoBehaviour
         this.wpnClass = wpnClass;
         Name = name;
         body.mass = Weight / 100;
+    }
+    public void SetupMeleeProjectile(Projectile projectile, WeaponClass wpnClass, float playerWeight, string name)
+    {
+        InvinciFrames = Time.deltaTime * 2f;
+        LiveTime = Time.time + projectile.GetLiveTime(0);
+        gravity = projectile.GetGravity();
+        Weight = projectile.AdditionalWeight + projectile.Weight + playerWeight;
+        MinPercentFalloff = projectile.MinPercentFalloff;
+        Damage = projectile.Damage;
+        Attributes = new List<string>(projectile.Attributes);
+        Piercing = Mathf.Max(projectile.GetPercing(), 1);
+        //Finished
+        SetExplosiveSize(projectile.GetExplosiveSize(), projectile.GetExplosiveTime(), projectile.GetSmallExplosionSize(), projectile.ExplosiveDamageMin);
+        Size = projectile.GetSize();
+        SetFallOff(projectile.GetDistance(false), projectile.GetDistance(true), projectile.MinPercentFalloff);
+        KnockBack = projectile.KnockBack;
+        transform.localScale = new Vector3(Size, Size, Size);
+        this.wpnClass = wpnClass;
+        Name = name;
+        body.mass = Weight / 100;
+    }
+    public void SetImmune(GameObject immune)
+    {
+        gameObjects.Add(immune);
+    }
+    public void SetImmune(GameObject[] immune)
+    {
+        for (int i = 0; i < immune.Length; i++)
+        {
+            gameObjects.Add(immune[i]);
+        }
     }
     public void SetFallOff(float minDist, float maxDist, float minPercent)
     {
@@ -173,13 +205,20 @@ public class MovingProjectile : MonoBehaviour
     /// </summary>
     /// <param name="direct"></param>
     /// <returns></returns>
-    public ForceKnockback GetKnockback()
+    public ForceKnockback GetKnockback(bool invertZ)
     {
         float x = KnockBack.x * (UnityEngine.Random.value - 0.5f);
-        Vector3 finalKnockback = new Vector3(x, KnockBack.y, KnockBack.z);
-
-        // Use forward direction for knockback orientation
-        return new ForceKnockback(finalKnockback, transform.position,Weight * 100);
+        if (invertZ)
+        {
+            Vector3 finalKnockback = new Vector3(x, KnockBack.y, KnockBack.z * -1);
+            return new ForceKnockback(finalKnockback, transform.position, Weight * 100);
+        }
+        else
+        {
+            Vector3 finalKnockback = new Vector3(x, KnockBack.y, KnockBack.z);
+            return new ForceKnockback(finalKnockback, transform.position, Weight * 100);
+        }
+            
     }
     public float Gravity
     {
@@ -196,11 +235,14 @@ public class MovingProjectile : MonoBehaviour
     {
         run = WorldRun.Instance;
         StartingPos = transform.position;
+        gameObject.layer = 6;
+
     }
     private void Awake()
     {
         run = WorldRun.Instance;
         StartingPos = transform.position;
+        gameObject.layer = 6;
     }
     private void FixedUpdate()
     {
@@ -236,7 +278,7 @@ public class MovingProjectile : MonoBehaviour
                 float damageMultiplier = Mathf.Lerp(1f, MinPercentFalloff, travelRatio);
                 float finalDamage = Damage * damageMultiplier;
                 gameObjects.Add(box.ApplyDamage(GetHashCode(), Name, 100, finalDamage, wpnClass));
-                box.ApplyKnockback(GetHashCode(), Name, 10, GetKnockback());
+                box.ApplyKnockback(GetHashCode(), Name, 10, GetKnockback(true));
                 box.ApplyAttributes(GetHashCode(), Name, 20, CommandRequest.Attributes, Attributes.ToArray());
                 Piercing -= 100;
             }
@@ -267,7 +309,7 @@ public class MovingProjectile : MonoBehaviour
                 finalDamage *= explosiveDamageMultiplier;
 
                 gameObjects.Add(box.ApplyDamage(GetHashCode(), Name, 100, finalDamage, wpnClass));
-                box.ApplyKnockback(GetHashCode(), Name, 10, GetKnockback());
+                box.ApplyKnockback(GetHashCode(), Name, 10, GetKnockback(false));
                 box.ApplyAttributes(GetHashCode(), Name, 20, CommandRequest.Attributes, Attributes.ToArray());
                 Piercing -= 100;
             }
@@ -278,7 +320,21 @@ public class MovingProjectile : MonoBehaviour
             if (Piercing <= 0)
             {
                 DidExplode();
-            } 
+            }
+        }
+        if (wpnClass == WeaponClass.Melee) //Melee weapon should hit as many players as possible.
+        {
+            if (collision.collider.TryGetComponent<HurtBox>(out HurtBox box) && !gameObjects.Contains(collision.collider.gameObject))
+            {
+                //Vector3 distance = (collision.collider.transform.position - transform.position).normalized;
+                float totalTravel = Vector3.Distance(StartingPos, transform.position);
+                float travelRatio = Mathf.Clamp01((totalTravel - MinDist) / (MaxDist - MinDist));
+                float damageMultiplier = Mathf.Lerp(1f, MinPercentFalloff, travelRatio);
+                float finalDamage = Damage * damageMultiplier;
+                gameObjects.Add(box.ApplyDamage(GetHashCode(), Name, 100, finalDamage, wpnClass));
+                box.ApplyKnockback(GetHashCode(), Name, 10, GetKnockback(true));
+                box.ApplyAttributes(GetHashCode(), Name, 20, CommandRequest.Attributes, Attributes.ToArray());
+            }
         }
     }
     private void DidExplode()

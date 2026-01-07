@@ -19,12 +19,20 @@ public class ChatManager : MonoBehaviour
     {
         InputBoxes.SetState(DefaultsOn);
         SheerMessagesState = DefaultsOn;
+        SaveData.TryLoadTextLines(out string[] text);
+        previousMsgs.AddRange(text);
     }
     public void OpenBox(string startText = "")
     {
         InputBoxes.SetState(true);
         SheerMessagesState = true;
         EnterMessage.text = startText;
+        EnterMessage.caretPosition = EnterMessage.text.Length - 1;
+    }
+    public void SetText(string text)
+    {
+        EnterMessage.text = text;
+        EnterMessage.caretPosition = EnterMessage.text.Length - 1;
     }
     public void CloseBox(float switchTime = 0f)
     {
@@ -104,20 +112,29 @@ public class ChatManager : MonoBehaviour
             EnterMessage.text = "";
             return;
         }
+        else if (LastState == 0 && Direction < 0)
+        {
+            LastState = -1;
+            EnterMessage.text = "";
+            return;
+        }
         else if (LastState <= -1 && Direction < 0)
         {
             LastState = previousMsgs.Count - 1;
         }
         else if (Direction > 0)
         {
-            LastState = LastState + 1;
+            LastState++;
         }
         else if (Direction < 0)
         {
-            LastState = LastState - 1;
+            LastState--;
         }
-
-        EnterMessage.text = previousMsgs[LastState];
+        if (LastState > -1)
+        {
+            EnterMessage.text = previousMsgs[LastState];
+            EnterMessage.caretPosition = EnterMessage.text.Length - 1;
+        }
     }
     
 }

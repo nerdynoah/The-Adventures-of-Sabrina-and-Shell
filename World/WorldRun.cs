@@ -21,11 +21,6 @@ public class WorldRun : MonoBehaviour
             Physics.gravity = new Vector3(0,gravityAdj * GRAVITY,0);
         }
     }
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
     private void Awake()
     {
         if (Instance == null)

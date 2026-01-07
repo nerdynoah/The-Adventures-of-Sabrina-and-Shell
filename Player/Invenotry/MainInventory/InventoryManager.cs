@@ -1,4 +1,4 @@
-using BaseCharacter.Entities;
+using BaseCharacter.Entity;
 using BaseCharacter.Items;
 using BaseCharacter.Structual;
 using System;
@@ -255,7 +255,7 @@ public class InvManager : MonoBehaviour
     /// <param name="hotSize">How big the hotbar is</param>
     /// <param name="scale">Rescale the object</param>
     /// <param name="totalSize">The total size of your inventory</param>
-    public void SetupInventorySize(int totalSize, int hotSize, int defaultSlot, float scale, float distance, int col, float StartScreenWidth = 0.2f, float height = 60f, float fullInvoHeight = 0.5f, float fullInvoHGap = 80f)
+    public void SetupInventorySize(int totalSize, int hotSize, int defaultSlot, float scale, float distance, int col, float StartScreenWidth = 200f, float height = 60f, float fullInvoHeight = 0.5f, float fullInvoHGap = 80f)
     {
         distance = Mathf.Abs(distance);
         distance = distance * -1;
@@ -577,7 +577,14 @@ public class InvManager : MonoBehaviour
             }
             if (item != null && !item.GetIsEmptyItem())
             {
-                SetTexture(i, item.GetTheTexture(),item.GetHeldAmountString());
+                try
+                {
+                    SetTexture(i, item.GetTheTexture(), item.GetHeldAmountString());
+                }
+                catch
+                {
+                    SetTexture(i, item.GetTheTexture(),"");
+                }
             }
             else
             {
@@ -628,7 +635,7 @@ public class InvManager : MonoBehaviour
                 ClearTexture(i);
             }
         }
-        //SetExtraButtons(player.GetInventory());
+        //SetExtraButtons(Player.GetInventory());
     }
     #endregion
     #region Full Inventory

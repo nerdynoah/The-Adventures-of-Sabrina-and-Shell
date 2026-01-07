@@ -1,5 +1,6 @@
 using BaseCharacter;
-using BaseCharacter.Entities;
+using BaseCharacter.Effects;
+using BaseCharacter.Entity;
 using BaseCharacter.Items;
 using BaseCharacter.Movement;
 using BaseCharacter.Structual;
@@ -16,7 +17,7 @@ public class Walking : MonoBehaviour
     [SerializeField] private Vision vision;
     [SerializeField] private Rigidbody body;
     [SerializeField] private HurtBox hurtBox;
-    [Header("player Structure data")]
+    [Header("Player Structure data")]
     [SerializeField] private PlayerShadow shadow;
     [SerializeField] private GameObject[] DistanceFeet;
     [SerializeField] private CapsuleCollider playerBody;
@@ -48,8 +49,8 @@ public class Walking : MonoBehaviour
     private GRDPound gPound => character.Gpound;
     private AirMovement airMent => character.AirMent;
     private Player Player { get => character.Player; set { character.SetPlayer(value); } }
-    
-    private readonly float JUMPDELAY = 0.128f;
+    private List<InventorySystem> ExtraDisplayCase;
+    private float JUMPDELAY => character.JUMPDELAY; //0.128f;
     private readonly float GAMEDELAY = 0.1f;
     private float jumpDelay;
     private bool InMenu { get; set; } = false;
@@ -67,8 +68,7 @@ public class Walking : MonoBehaviour
     void Start()
     {
         worldRun = WorldRun.Instance;
-        Debug.Log(GetSaveData);
-        SlashRegex.SetChatDefaultRegexLimited(SaveData.GetDefaults());
+        SlashRegex.SetChatRegexLimited(SaveData.GetDefaults(), out string setupPlayer, out List<AddItemRequest> items, out List<string> attri);
         SaveData.GetAttributesToLibary();
         
         int hotbar = 9;
@@ -83,37 +83,15 @@ public class Walking : MonoBehaviour
         int invoSlots = hotbar + ammo + armor + extraItem;
         try
         {
-            if (SaveData.TryLoadGame(out PlayerSaveData get))
+            Character thing = AllLibary.ItemLibary.SearchLibaryForCharacter(setupPlayer);
+            if (thing != null)
             {
-                Player = get.GetSavePlayerData();
-                Player.FillNullInventory();
-                transform.position = get.Location;
-
-                List<string> names = get.Inventory;
-                foreach (string name in names) Debug.Log(name);
-                for (int i = 0; i < names.Count && i < names.Count; i++)
-                {
-                    if (names[i] == null || names[i] == string.Empty || names[i] == "" || names[i] == " ")
-                    {
-                        continue;
-                    }
-                    try
-                    {
-                        Player.AddItem(AllLibary.ItemLibary.SearchLibaryForTemplete(names[i]),i);
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogWarning($"Error in finding item, Continue the search {e}");
-                        continue;
-                    }   
-                }
-                Player.SetReachRange(get.Reach);
-                Player.DepositMoney(get.Money);
-                Player.SetupMovement(get.SpeedBase, get.JumpBase, get.GroundPoundBase, get.GravityBase, get.RotationSpeedbase, get.BreakingSpeed, get.GravityProtectionTime);
+                character = new Character(thing, new Player(thing.Player, new Player("Nell Shell", "", invoSlots, 5000,100)));
+                Player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(attri.ToArray()));
             }
             else
             {
-                Player = new Player("RPG", "Super cool", 20, 1f, 4900f, 30f,1f, invoSlots, 10f);
+                Player = new Player("RPG", "Super cool", 20, 1f, 4900f, 30f,100f, invoSlots, 10f);
                 (WeaponClass, float)[] resist = new(WeaponClass,float)[Enum.GetValues(typeof(WeaponClass)).Length];
                 for (int i = 0; i < resist.Length; i++)
                 {
@@ -129,7 +107,7 @@ public class Walking : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogAssertion($"An error occured whlie reading Save data: {e}");
-            Player = new Player("RPG", "Super cool", 20, 1f, 4900f, 30f, 1f, invoSlots, 10f);
+            Player = new Player("RPG", "Super cool", 20, 1f, 4900f, 100f, 1f, invoSlots, 10f);
             (WeaponClass, float)[] resist = new (WeaponClass, float)[Enum.GetValues(typeof(WeaponClass)).Length];
             for (int i = 0; i < resist.Length; i++)
             {
@@ -149,6 +127,7 @@ public class Walking : MonoBehaviour
         //UI control
         Health.SetupHealthUI(hpInfo[0], hpInfo[1], 5.2f, 9.01f);
         //Bubbles
+        Player.SetReachRange(3);
         reaching.SetReach(Player.GetReach());
         vision.SetSize(Player.Vision);
         SetLoadData(true);
@@ -190,7 +169,7 @@ public class Walking : MonoBehaviour
                 {
                     body.AddForce(apply[i].Knockback.GetKnockback(Player.Weight, transform.position));
                     body.AddForce(0,apply[i].Knockback.GetYKnockback(Player.Weight),0);
-                    //Debug.Log(apply[i].Knockback.GetKnockback(player.Weight, transform.position));
+                    //Debug.Log(apply[i].Knockback.GetKnockback(Player.Weight, transform.position));
                 }
             }
             hurtBox.ClearQueue();
@@ -222,7 +201,7 @@ public class Walking : MonoBehaviour
     {
         InInventory = invManager.GetFullInventoryOpen();
         InventoryItem item = Player.GetInventoryItemCurrentHotbar();
-        if(item.GetPassiveData(Player))
+        if(item != null && item.GetPassiveData(Player))
         {
             if (InInventory)
             {
@@ -233,18 +212,35 @@ public class Walking : MonoBehaviour
                 invManager.RefreshHotbarOnly(Player);
             }
         }
+        if (item != null)
+        {
+            Ammo.SetAmmo(item);
+        }
         if (Input.GetKeyDown(controls.interact))
         {
             RaycastHit hit = movement.GetRayPoint(0, 0, 9);
             Debug.DrawLine(transform.position, hit.point,Color.white);
-            if (!Player.GetIsFull() && hit.collider.TryGetComponent<Blocks>(out Blocks block))
+            try
             {
-                Player.AddItem(block.GetInventoryItem(true));
+                if (!Player.GetIsFull() && hit.collider.TryGetComponent<Blocks>(out Blocks block))
+                {
+                    Player.AddItem(block.GetInventoryItem(true));
+                }
             }
+            catch (NullReferenceException e)
+            {
+                Debug.Log("Tried to grab item when nothing exsistsed");
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+            
         }
         if (Input.GetKey(controls.interact))
         {
             reaching.AddItems(Player);
+            
         }
         if (timeGameDelay < Time.time)
         {
@@ -260,12 +256,11 @@ public class Walking : MonoBehaviour
                 invManager.RefreshHotbarOnly(Player);
             }
         }
-        Ammo.SetAmmo(item);
-        if (Input.GetKeyDown(controls.primaryFire) && !InMenu)
+        if (Input.GetKeyDown(controls.primaryFire) && !InMenu && item != null)
         {
             ShootPress(item);
         }
-        if (Input.GetKeyUp(controls.primaryFire) && !InMenu)
+        if (Input.GetKeyUp(controls.primaryFire) && !InMenu && item != null)
         {
             ShootRelease(item);
         }
@@ -279,7 +274,7 @@ public class Walking : MonoBehaviour
         }
         if (jump != 0 && !isGrounded)
         {
-            //scaleUp.AddScaleUI(Mathf.Pow(jump * player.GetJump(),2));
+            //scaleUp.AddScaleUI(Mathf.Pow(jump * Player.GetJump(),2));
             gPound.Reset();
             if (controls.GetIsAMovementKeyPressed())
             {
@@ -314,16 +309,12 @@ public class Walking : MonoBehaviour
         ApplyEffects();
         ChatBox();
         Health.SetHP(Player.Health.GetHPInfo()[0]);
+        //HpBar.HpAdjust(10f,Player.GetHPInfo()[0],1f);
 
-        //HpBar.HpAdjust(10f,player.GetHPInfo()[0],1f);
-        
     }
     private void ApplyEffects()
     {
-        Player.ApplyFireDamage();
-        Player.ApplyCrying();
-        Player.ApplyRegeneration();
-        Player.ApplyFlytation();
+        Player.ApplyAllEffects();
     }
     private void ChatBox()
     {
@@ -339,9 +330,10 @@ public class Walking : MonoBehaviour
             InInventory = false;
             invManager.CloseInventoryOpenHotbar();
             InMenu = true;
+            Cursor.lockState = CursorLockMode.None;
             chatManager.OpenBox();
             chatManager.SelectInputField();
-            Cursor.lockState = CursorLockMode.None;
+            
         }
         if (Input.GetKeyDown(KeyCode.UpArrow) && InMenu == true && !InInventory)
         {
@@ -355,7 +347,8 @@ public class Walking : MonoBehaviour
         {
             //SlashRegex.GetSlashSearchType(text: chatManager.GetInputText(), matches: out MatchCollection commands);
             chatManager.GetInputText().TrimEnd();
-            SlashRegex.GetChatBoxRegex(text: chatManager.GetInputText(), inventorySize: Player.GetInventorySize(), out List<string> attributes, out List<AddItemRequest> items, out List<string> msgs, out bool clear, out float jump, out bool getAllItems, out bool max, out RegexOrderItems orderBy, out string charact);
+            SaveData.AppendTextHistory(chatManager.GetInputText(),false);
+            SlashRegex.GetChatBoxRegex(text: chatManager.GetInputText(), inventorySize: Player.GetInventorySize(), out List<Effect> attributes, out List<AddItemRequest> items, out List<string> msgs, out bool clear, out float jump, out bool getAllItems, out bool max, out RegexOrderItems orderBy, out string charact,out string error);
             string text = string.Concat(msgs.ToArray());
             msgs.Clear();
             Debug.Log(text);
@@ -369,13 +362,16 @@ public class Walking : MonoBehaviour
             }
             if (charact != null)
             {
-                character = new Character(AllLibary.ItemLibary.SearchLibaryForCharacter(charact));
+                character = new Character(AllLibary.ItemLibary.SearchLibaryForCharacter(charact),Player) ?? character;
+                body.mass = Player.Weight;
+                scaleDown.SetupScale(Mathf.Max(Mathf.Abs(Gravity * 2f), Player.GroundPoundBase.Max * 4.5f, 98));
+                scaleUp.SetupScale(Player.JumpBase.Max * 80f);
             }
             if (getAllItems)
             {
                 Player.AddItem(AllLibary.ItemLibary.GetAllItems().ToArray());
             }
-            Player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(attributes.ToArray()));
+            //Player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(attributes.ToArray()));
             for (int i = 0; i < items.Count; i++)
             {
                 Player.AddItem(items[i].GetItem());
@@ -391,10 +387,14 @@ public class Walking : MonoBehaviour
                 Player.MaxOutItems();
             }
             invManager.RefreshFullInventory(Player);
+            if (error != string.Empty)
+            {
+                generic.AddText(error, false, 8, 5);
+            }
         }
         if (Input.GetKeyDown(KeyCode.Period) && !InInventory && InMenu == false)
         {
-            SaveData.SaveGame(Player, new WorldLocation(Methods.GetCurrentSceneName(), transform.position));
+            SaveData.SaveGame(character, new WorldLocation(Methods.GetCurrentSceneName(), transform.position));
         }
         if (Input.GetKeyDown(KeyCode.Comma) && !InInventory && InMenu == false)
         {
@@ -595,16 +595,34 @@ public class Walking : MonoBehaviour
             {
                 rockTMP.ConsumeAmmo(1);
                 rockTMP.ApplyAttackDelay();
+                Debug.Log(Player.Aiming);
                 if (!rockTMP.UsingPattern)
                 {
                     RaycastHit hit = movement.GetRayPoint(rockTMP, Player.Aiming);
-                    Vector3 offset = GetOffsetToSelf(rockTMP.GetProjectile((int)click).GetSize() + hurtBox.GetSize());
+                    Vector3 direction = (hit.point - transform.position).normalized;
                     Debug.DrawLine(transform.position, hit.point, Color.blue, 6f);
                     Projectile projectile = rockTMP.GetProjectile((int)click);
+                    Vector3 offset;
                     GameObject tempBullet = Instantiate(projectile.SphereicalObject);
-                    tempBullet.GetComponent<MovingProjectile>().SetupProjectile(projectile, rockTMP.GetWeaponClass(), Player.GetName());
+                    Debug.Log($"immune to object: {projectile.IsShooterImmune}");
+                    if (projectile.IsShooterImmune)
+                    {
+                        tempBullet.GetComponent<MovingProjectile>().SetImmune(hurtBox.gameObject);
+                        offset = GetOffsetToSelf(rockTMP.GetProjectile((int)click).GetSize()/2);
+                    }
+                    else
+                    {
+                        offset = GetOffsetToSelf(rockTMP.GetProjectile((int)click).GetSize()/2 + hurtBox.GetSize());
+                    }
+                    if (rockTMP.GetWeaponClass() == WeaponClass.Melee)
+                    {
+                        tempBullet.GetComponent<MovingProjectile>().SetupMeleeProjectile(projectile, rockTMP.GetWeaponClass(), Player.Weight, Player.GetName());
+                    }
+                    else
+                    {
+                        tempBullet.GetComponent<MovingProjectile>().SetupProjectile(projectile, rockTMP.GetWeaponClass(), Player.GetName());
+                    }
                     tempBullet.transform.position = offset;
-                    Vector3 direction = (hit.point - offset).normalized;
                     tempBullet.GetComponent<Rigidbody>().AddForce(speed * direction);
                     tempBullet.GetComponent<Rigidbody>().AddForce(projectile.GetSpeed() * direction);
                     tempBullet.GetComponent<Rigidbody>().AddForce(projectile.GetYeet() * new Vector3(0, 1, 0));
@@ -617,12 +635,28 @@ public class Walking : MonoBehaviour
                     {
                         RaycastHit hit = movement.GetRayPoint(rockTMP, Player.Aiming);
                         Vector3 offset = GetOffsetToSelf(rockTMP.GetProjectile((int)click).GetSize() + hurtBox.GetSize());
+                        Vector3 direction = (hit.point - transform.position).normalized;
                         Debug.DrawLine(offset, hit.point, Color.blue, 6f);
                         Projectile projectile = rockTMP.GetProjectile((int)click);
                         GameObject tempBullet = Instantiate(projectile.SphereicalObject);
-                        tempBullet.GetComponent<MovingProjectile>().SetupProjectile(projectile, rockTMP.GetWeaponClass(), Player.GetName());
+                        if (projectile.IsShooterImmune)
+                        {
+                            tempBullet.GetComponent<MovingProjectile>().SetImmune(hurtBox.gameObject);
+                            offset = GetOffsetToSelf(hurtBox.GetSize());
+                        }
+                        else
+                        {
+                            offset = GetOffsetToSelf(rockTMP.GetProjectile((int)click).GetSize() + hurtBox.GetSize());
+                        }
+                        if (rockTMP.GetWeaponClass() == WeaponClass.Melee)
+                        {
+                            tempBullet.GetComponent<MovingProjectile>().SetupMeleeProjectile(projectile, rockTMP.GetWeaponClass(), Player.Weight, Player.GetName());
+                        }
+                        else
+                        {
+                            tempBullet.GetComponent<MovingProjectile>().SetupProjectile(projectile, rockTMP.GetWeaponClass(), Player.GetName());
+                        }
                         tempBullet.transform.position = offset;
-                        Vector3 direction = (hit.point - offset).normalized;
                         tempBullet.GetComponent<Rigidbody>().AddForce(speed * direction);
                         tempBullet.GetComponent<Rigidbody>().AddForce(projectile.GetSpeed() * direction);
                         tempBullet.GetComponent<Rigidbody>().AddForce(projectile.GetYeet() * new Vector3(0, 1, 0));
@@ -647,7 +681,7 @@ public class Walking : MonoBehaviour
     public Vector3 GetOffsetToSelf(float size)
     {
         Ray placementRay = movement.GetCamera().ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        float spawnForwardOffset = Mathf.Max((Mathf.Abs(body.velocity.x) + Mathf.Abs(body.velocity.z) + Mathf.Abs(body.velocity.y)) / 12f, 0.05f + size);
+        float spawnForwardOffset = Mathf.Max((Mathf.Abs(body.velocity.x) + Mathf.Abs(body.velocity.z) + Mathf.Abs(body.velocity.y)) / 12f, 0.01f + size);
         float lookingArea = movement.LookingYDirection();
         if (lookingArea > 0 && lookingArea < 100f) //0-90 value
         {
@@ -710,7 +744,7 @@ public class Walking : MonoBehaviour
     /// Checks if your grounded.
     /// </summary>
     /// <remarks>
-    /// Code partially made from https://discussions.unity.com/t/how-do-i-properly-detect-if-the-player-is-grounded/1545895/5
+    /// Code partially made from https://discussions.unity.com/t/how-do-i-properly-detect-if-the-Player-is-grounded/1545895/5
     /// </remarks>
     private bool CheckGrounded()
     {
@@ -853,12 +887,12 @@ public class Walking : MonoBehaviour
     
     private bool TookDamage = false;
     /// <summary>
-    /// Calculates fall damage based on -Body.Velocity.y. <code>(Damage = Gravity * <paramref name="gravProt"/> - <see cref="BaseCharacter.Player.GroundPound"/> - <see cref="BaseCharacter.Player.Jump"/>)/(<paramref name="div"/>)</code>
+    /// Calculates fall damage based on -Body.Velocity.y. <code>(Damage = Gravity * <paramref name="gravProt"/> - <see cref="BaseCharacter.Entity.GroupOfStats.Jump"/> - <see cref="BaseCharacter.Entity.GroupOfStats.Jump"/>)/(<paramref name="div"/>)</code>
     /// </summary>
     /// <param name="isGrounded">Is grounded</param>
     /// <param name="gravProt">How many seconds of protection from gravity if moving at GroundPoundSpeed do you get</param>
     /// <param name="div">Devide damage</param>
-    private void FallDamage(bool isGrounded, float gravProt, float div = 100, float secondaryThresh = 200, float div2 = 75)
+    private void FallDamage(bool isGrounded, float gravProt, float div = 90, float secondaryThresh = 200, float div2 = 60)
     {
         if (isGrounded && !TookDamage)
         {

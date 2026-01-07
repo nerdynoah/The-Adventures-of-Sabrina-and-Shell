@@ -29,7 +29,7 @@ public class BoardUIscript : MonoBehaviour
     /// <summary>
     /// Reload the Quest
     /// </summary>
-    /// <param name="level">player level</param>
+    /// <param name="level">Player level</param>
     public void ReloadQuests(int level)
     {
         for (int i = 0; i < quests.Length; i++)

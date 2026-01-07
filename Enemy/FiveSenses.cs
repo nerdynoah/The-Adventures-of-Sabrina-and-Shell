@@ -11,7 +11,7 @@ public class FiveSenses : MonoBehaviour
     
     private List<Vector3> InterestLocations = new List<Vector3>();
     private int interestLocationIndex = 0;
-
+    
 
     public Vector3 GetInFront(float vision)
     {

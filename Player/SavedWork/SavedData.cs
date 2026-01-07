@@ -1,18 +1,21 @@
-using BaseCharacter.Entities;
+using BaseCharacter.Entity;
 using BaseCharacter.Structual;
+using BaseCharacter;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using static Enums;
-
 public static class SaveData
 {
     private static string SavePath => Path.Combine(Application.persistentDataPath, "player_save.json");
     private static string RegexPath => Path.Combine(Application.persistentDataPath, "regex_save.json");
+    private static string SaveHistory => Path.Combine(Application.persistentDataPath, "history.txt");
+    private static string SaveCharacterPath => Path.Combine(Application.persistentDataPath, "character_save.json");
     public static void SaveGame(Player player, WorldLocation location)
     {
         float extra = 0;
@@ -22,7 +25,7 @@ public static class SaveData
         for (int i = 0; i < player.GetInventorySize(); i++)
         {
             inventory.Add(player.GetInventoryItem(i).GetName());
-            amount.Add(player.GetInventoryItem(i).GetHeldAmount());
+            amount.Add(player.GetInventoryItem(i).Amount);
         }
         var saveData = new PlayerSaveData
         {
@@ -60,6 +63,33 @@ public static class SaveData
         string json = JsonUtility.ToJson(obj: saveData, prettyPrint: true);
         File.WriteAllText(SavePath, json);
         Debug.Log("Game saved to: " + SavePath);
+    }
+    public static void SaveGame(Character character, WorldLocation location)
+    {
+        List<string> inventory = new();
+        List<int> amount = new();
+        //List<Effect> effects = new List<Effect>();
+        for (int i = 0; i < character.Player.GetInventorySize(); i++)
+        {
+            inventory.Add(character.Player.GetInventoryItem(i).GetName());
+            amount.Add(character.Player.GetInventoryItem(i).Amount);
+        }
+        var saveData = new CharacterData
+        {
+            Name = character.Player.Name,
+            Desc = character.GetDesc(),
+            Money = character.Player.GetMoneyInt(),
+            gameLevel = character.Player.GameLevel,
+            CharacterName = character.GetName(),
+            items = inventory.ToArray(),
+            amounts = amount.ToArray(),
+            WorldName = location.Name,
+            Location = location.Location,
+        };
+
+        string json = JsonUtility.ToJson(obj: saveData, prettyPrint: true);
+        File.WriteAllText(SaveCharacterPath, json);
+        Debug.Log("Game saved to: " + SaveCharacterPath);
     }
     public static bool TryLoadGame(out PlayerSaveData loadedData)
     {
@@ -214,13 +244,39 @@ public static class SaveData
     }
     public static string GetDefaults()
     {
-        if (File.Exists(RegexPath))
+        if (File.Exists(RegexPath) && File.Exists(SaveCharacterPath))
         {
             try
             {
                 string json = File.ReadAllText(RegexPath);
+                string playerJson = File.ReadAllText(SaveCharacterPath);
                 RegexSaveData loadedData = JsonUtility.FromJson<RegexSaveData>(json);
-                string endResult = $"/Default item #{loadedData.DefaultItemAmount}";
+                CharacterData loadedPlayerData = JsonUtility.FromJson<CharacterData>(playerJson);
+                /*
+                //Was going to be used to load items, but I think I'll use a script to load the indivdual items and their spawn locations.
+                string items = string.Empty;
+                for (int i = 0; i < loadedPlayerData.items.Length; i++)
+                {
+                    if (loadedPlayerData.items[i].Equals("") || loadedPlayerData.items[i] == string.Empty)
+                    {
+                        continue;
+                    }
+                    items += loadedPlayerData.items[i].Replace('_', ' ');
+                    items += " ";
+                }
+                for (int i = 0; i < loadedPlayerData.amounts.Length; i++)
+                {
+                    if (loadedPlayerData.amounts[i] < 1 || loadedPlayerData.amounts[i] == 2147483646)
+                    {
+                        continue;
+                    }
+                    items += "#" + Mathf.Clamp(loadedPlayerData.amounts[i],1,int.MaxValue-1);
+                    items += " ";
+                }
+                Debug.Log(items);
+                */
+                string endResult = $"/default item #{loadedData.DefaultItemAmount} /g c {loadedPlayerData.CharacterName}";
+                Debug.Log(endResult);
                 //TODO: FINISH TARGET FINDING
                 /*
                 foreach(Attributes target in loadedData.RegexTarget.Select(v => (Attributes)v))
@@ -243,6 +299,87 @@ public static class SaveData
         //TODO: Add @ml at the end of this string
         return "/Default #1";
     }
+    public static void AppendTextLinesHistory(string[] lines)
+    {
+        try
+        {
+            File.AppendAllLines(SaveHistory, lines);
+            Debug.Log("Text lines appended to: " + SaveHistory);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Failed to append text lines: " + e.Message);
+        }
+    }
+    public static void AppendTextHistory(string content, bool newLine = true)
+    {
+        try
+        {
+            if (!newLine)
+            {
+                File.AppendAllText(SaveHistory, $"{DateTime.Now} " + content);
+            }
+            else
+            {
+                File.AppendAllText(SaveHistory, $"\n{DateTime.Now} " + content);
+            }
+            //Debug.Log("Text appended to: " + SaveHistory);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Failed to append text: " + e.Message);
+        }
+    }
+    public static bool TryLoadText(out string content)
+    {
+        try
+        {
+            if (File.Exists(SaveHistory))
+            {
+                content = File.ReadAllText(SaveHistory);
+                return true;
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Failed to load text: " + e.Message);
+        }
+
+        content = null;
+        return false;
+    }
+    public static bool TryLoadTextLines(out string[] lines, bool regexRemoveDate = true)
+    {
+        try
+        {
+            if (File.Exists(SaveHistory))
+            {
+                lines = File.ReadAllLines(SaveHistory);
+                if (regexRemoveDate)
+                {
+                    List<string> evilLines = new List<string>();
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        var matches = removeDate.Match(lines[i]);
+                        if (matches.Success)
+                        {
+                            evilLines.Add(matches.Groups[1].Value);
+                        }
+                    }
+                    lines = evilLines.ToArray();
+                }
+                return true;
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Failed to load text lines: " + e.Message);
+        }
+
+        lines = null;
+        return false;
+    }
+    private static readonly Regex removeDate = new Regex(@"[-[^A|P]M (?<text>.*)");
 }
 
 [Serializable]
@@ -251,7 +388,7 @@ public class PlayerSaveData
     #region Player Data
     public uint ID;
     /// <summary>
-    /// Name of the player
+    /// Name of the Player
     /// </summary>
     public string Name ;
     public string Desc ;
@@ -362,4 +499,23 @@ public class RegexSaveData
     public List<string> OtherAttributesApplied = new();
     public List<int> OtherAttributesIndex = new();
     #endregion
+}
+[Serializable]
+public class CharacterData
+{
+    public string Name;
+    public string Desc;
+    public int Money;
+    public int gameLevel;
+    public string CharacterName;
+    public string[] effects;
+    public string[] itemContains;
+    public string WorldName;
+    public Vector3 Location;
+    //Item data
+    public string[] items;
+    public int[] amounts;
+    public int[] SecondaryInfo;
+    public string[] SeconaryInfoText;
+    public int[] SecondaryInfoIndex;
 }

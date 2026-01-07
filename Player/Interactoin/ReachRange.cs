@@ -92,7 +92,7 @@ public class ReachRange : MonoBehaviour
         int itemsAdded = 0;
         int emptySlots = inventorySystem.GetAmountOfEmptyItems();
 
-        // Check if we have enough space for all items
+        // Check if the inventory has enough room to add all items
         if (emptySlots >= item.Count)
         {
             // Add all items
@@ -101,12 +101,9 @@ public class ReachRange : MonoBehaviour
                 if (item[i] != null)
                 {
                     InventoryItem inventoryItem = item[i].GetInventoryItem(true);
-                    if (inventoryItem != null)
+                    if (inventoryItem != null && inventorySystem.AddItem(inventoryItem))
                     {
-                        if (inventorySystem.AddItem(inventoryItem))
-                        {
-                            itemsAdded++;
-                        }
+                        itemsAdded++;
                     }
                 }
             }

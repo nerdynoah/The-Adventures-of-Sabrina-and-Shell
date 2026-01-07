@@ -238,7 +238,7 @@ public class Movement : MonoBehaviour
 
     }
     /// <summary>
-    /// See's if the player can move the mouse. Used during cutscenes
+    /// See's if the Player can move the mouse. Used during cutscenes
     /// </summary>
     /// <returns>True/False</returns>
     public bool GetCanAxis()
@@ -296,7 +296,7 @@ public class Movement : MonoBehaviour
     // Update is called once per frame
     private void UpdateTopDownPosition()
     {
-        // Maintain camera position directly above the player
+        // Maintain camera position directly above the Player
         if (target != null)
         {
             transform.position = new Vector3(
@@ -351,13 +351,14 @@ public class Movement : MonoBehaviour
     /// Get the raypoint of where your looking.
     /// </summary>
     /// <param name="rockTMP">The weapon to be used during the process to cause innacuracsyes</param>
-    /// <param name="aim">player aim</param>
+    /// <param name="aim">Player aim</param>
     /// <returns>Raycast hits</returns>
     public RaycastHit GetRayPoint(Weapon rockTMP, float aim)
     {
         Ray ray;
         Ray ogRay;
         Vector3 ogpoint = new Vector3(((GetCamera().pixelWidth) / 2), ((GetCamera().pixelHeight) / 2), 0.5f);
+        //Debug.Log($"Aim: {rockTMP.GetSphereAccuracy(true, aim)}");
         Vector3 point = new Vector3(ogpoint.x + rockTMP.GetSphereAccuracy(true, aim), ogpoint.y + rockTMP.GetSphereAccuracy(true, aim), ogpoint.z + rockTMP.GetSphereAccuracy(true, aim));
         Vector3 mousePosition = Input.mousePosition;
         Vector3 ThemousePosition = new Vector3(mousePosition.x + rockTMP.GetSphereAccuracy(true, aim), mousePosition.y + rockTMP.GetSphereAccuracy(true, aim), mousePosition.z + rockTMP.GetSphereAccuracy(true, aim));
@@ -371,9 +372,8 @@ public class Movement : MonoBehaviour
             ray = GetCamera().ScreenPointToRay(ThemousePosition);
             ogRay = GetCamera().ScreenPointToRay(ThemousePosition);
         }
-        int includeMask = (1 << 0) | (1 << 7) | (1 << 10) | (1 << 11);
+        int includeMask = (1 << 0) | (1 << 10);
         Physics.Raycast(ray, out RaycastHit hit, 1000, includeMask);
-        Debug.Log(hit.point);
         return hit;
     }
     public RaycastHit GetRayPoint(float rngAim, float aim)

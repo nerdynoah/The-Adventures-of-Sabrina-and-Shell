@@ -1,5 +1,5 @@
 using BaseCharacter;
-using BaseCharacter.Entities;
+using BaseCharacter.Entity;
 using BaseCharacter.Items;
 using System;
 using System.Collections.Generic;
@@ -217,6 +217,7 @@ public class AllLibary : MonoBehaviour
 
             Character item = Persons[name];
             Debug.Log($"Getting Character by {name} -> {item?.GetName()}");
+            Debug.Log($"Character health = {item?.Player.Health.Current}");
             return item;
         }
         public List<string> GetInventoryItemNames() => Inventory.Keys.ToList();
@@ -409,11 +410,12 @@ public class AllLibary : MonoBehaviour
         libary.AddAttribute(new AttributesTemplete("Speed Boost Fire", Attributes.Speed, 1.15f, 10f, 0));
         libary.AddAttribute(new AttributesTemplete("Speed Boost Sparkle", Attributes.Speed, 2f, 5f, 0));
         libary.AddAttribute(new AttributesTemplete("Speed Boost", Attributes.Speed, 1f, 20f, -1));
-        libary.AddAttribute(new AttributesTemplete("Speed Boost FlameThrower", Attributes.Speed, 1.1f, 3.5f, 0));
+        
         libary.AddAttribute(new AttributesTemplete("Poison Damage 1", Attributes.Poison, 0.1f, 4f, 0.15f));
         libary.AddAttribute(new AttributesTemplete("Poison Damage 2", Attributes.Poison, 0.2f, 5f, 0.12f));
         libary.AddAttribute(new AttributesTemplete("Poison Damage 3", Attributes.Poison, 0.3f, 6f, 0.1f));
-        libary.AddAttribute(new AttributesTemplete("Crying 1", Attributes.Crying, 1f, 5f, 1f));
+        
+        libary.AddAttribute(new AttributesTemplete("Crying", Attributes.Crying, 1f, 5f, 1f));
         libary.AddAttribute(new AttributesTemplete("Crying 2", Attributes.Crying, 2f, 4.9f, 1f));
         libary.AddAttribute(new AttributesTemplete("Crying 3", Attributes.Crying, 3f, 4.8f, 1f));
         libary.AddAttribute(new AttributesTemplete("Crying 4", Attributes.Crying, 4f, 4.7f, 1f));
@@ -426,29 +428,39 @@ public class AllLibary : MonoBehaviour
         libary.AddAttribute(new AttributesTemplete("Crying 11", Attributes.Crying, 20f, 3.35f, 1f));
         libary.AddAttribute(new AttributesTemplete("Crying 12", Attributes.Crying, 22.5f, 3f, 1f));
         libary.AddAttribute(new AttributesTemplete("Crying 13", Attributes.Crying, 25f, 2.55f, 1f));
-        libary.AddAttribute(new AttributesTemplete("Weaping 1", Attributes.Crying, 30f, 30f, 1f));
+        libary.AddAttribute(new AttributesTemplete("Crying FlameThrower", Attributes.Crying, 1f, 2f, 1f));
+
+        libary.AddAttribute(new AttributesTemplete("Weaping", Attributes.Crying, 30f, 30f, 1f));
         libary.AddAttribute(new AttributesTemplete("Weaping 2", Attributes.Crying, 50f, 27f, 1f));
         libary.AddAttribute(new AttributesTemplete("Weaping 3", Attributes.Crying, 70f, 25f, 1f));
         libary.AddAttribute(new AttributesTemplete("Weaping 4", Attributes.Crying, 90f, 22f, 1f));
         libary.AddAttribute(new AttributesTemplete("Weaping 5", Attributes.Crying, 110f, 20f, 1f));
-        libary.AddAttribute(new AttributesTemplete("Flytation 1", Attributes.Flytation, 1f, 1.5f, 35f));
-        libary.AddAttribute(new AttributesTemplete("Flytation 2", Attributes.Flytation, 3f, 1.75f, 45f));
-        libary.AddAttribute(new AttributesTemplete("Flytation 3", Attributes.Flytation, 5f, 2f, 60f));
-        libary.AddAttribute(new AttributesTemplete("High Jump 15", Attributes.Jump, 1.15f, 15f, 0f));
+        
+        libary.AddAttribute(new AttributesTemplete("Flytation 1", Attributes.Flytation, 1f, 5f, 35f));
+        libary.AddAttribute(new AttributesTemplete("Flytation 2", Attributes.Flytation, 1.5f, 6f, 45f));
+        libary.AddAttribute(new AttributesTemplete("Flytation 3", Attributes.Flytation, 2.4f, 4f, 60f));
+        
+        libary.AddAttribute(new AttributesTemplete("High Jump", Attributes.Jump, 1.15f, 15f, 0f));
         libary.AddAttribute(new AttributesTemplete("High Jump 35", Attributes.Jump, 1.35f, 15f, 0f));
         libary.AddAttribute(new AttributesTemplete("High Jump 60", Attributes.Jump, 1.60f, 15f, 0f));
         libary.AddAttribute(new AttributesTemplete("High Jump 100", Attributes.Jump, 2f, 15f, 0f));
-        libary.AddAttribute(new AttributesTemplete("Regeneration 1", Attributes.Regeneration, 0.18f, 5, 0.2f));
+        
+        libary.AddAttribute(new AttributesTemplete("Regeneration", Attributes.Regeneration, 0.18f, 5, 0.2f));
         libary.AddAttribute(new AttributesTemplete("Regeneration 2", Attributes.Regeneration, 0.2f, 7, 0.2f));
         libary.AddAttribute(new AttributesTemplete("Regeneration 3", Attributes.Regeneration, 0.225f, 8, 0.15f));
         libary.AddAttribute(new AttributesTemplete("Regeneration Sniper", Attributes.Regeneration, 1.2f, 5, 0.6f));
+        libary.AddAttribute(new AttributesTemplete("Max heal", Attributes.Regeneration, 50, 0.3f, 0.01f));
+
+
         libary.AddAttribute(new AttributesTemplete("Flytation", Attributes.Flytation, 2, 8, 1));
+        
+        libary.AddAttribute(new AttributesTemplete("Bump on yo head", Attributes.Bigger, 2, 10, 1)); //TODO: Implement
         
 
         //Multi-Level Effect
         libary.AddAttribute(new AttributesTemplete("Fire Damage 1", Attributes.Poison, 0.5f, 8f, 1f, "Speed Boost Fire"));
         libary.AddAttribute(new AttributesTemplete("Fire Damage 2", Attributes.Poison, 0.7f, 8f, 0.9f, "Speed Boost Fire"));
-        libary.AddAttribute(new AttributesTemplete("Fire Damage FlameThrower", Attributes.Poison, 0.2f, 3f, 0.1f));
+        libary.AddAttribute(new AttributesTemplete("Fire Damage FlameThrower", Attributes.Poison, 0.01f, 2f, 0.1f, "Crying FlameThrower"));
         libary.AddAttribute(new AttributesTemplete("Spark Fire Damage 1", Attributes.Poison, 0.1f, 4f, 0.15f, "Speed Boost Sparkle"));
         libary.AddAttribute(new AttributesTemplete("Spark Fire Damage 2", Attributes.Poison, 0.15f, 3.558f, 0.1f, "Speed Boost Sparkle"));
     }
@@ -492,24 +504,30 @@ public class AllLibary : MonoBehaviour
             }
             libary.AddInventoryItem(weaponTempletes[i].GetItem());
         }
+        libary.AddInventoryItem(new InventoryItem(new Item("Weight 1KG","Your 1KG heavier" ,ItemType.Item), 1, HoldingType.UnlmintedStackable, 110, 100, null));
+        libary.AddInventoryItem(new InventoryItem(new Item("Weight 2.5KG", "Your 2.5KG heavier", ItemType.Item), 1, HoldingType.UnlmintedStackable, 250, 250, null));
+        libary.AddInventoryItem(new InventoryItem(new Item("Weight 5KG", "Your 5KG heavier", ItemType.Item), 1, HoldingType.UnlmintedStackable, 460, 500, null));
+        libary.AddInventoryItem(new InventoryItem(new Item("Weight 10KG", "Your 10KG heavier", ItemType.Item), 1, HoldingType.UnlmintedStackable, 900, 1000, null));
+        libary.AddInventoryItem(new InventoryItem(new Item("Weight 25KG", "Your 25KG heavier", ItemType.Item), 1, HoldingType.UnlmintedStackable, 2200, 2500, null));
+        libary.AddInventoryItem(new InventoryItem(new Item("Weight 100KG", "Your 100KG heavier", ItemType.Item), 1, HoldingType.UnlmintedStackable, 8000, 10000, null));
     }
     private void SetupCharacter()
     {
         if (characterTempletes == null)
         {
-            Debug.LogAssertion("WeaponTempletes array is null!");
+            Debug.LogAssertion("Character array is null!");
             return;
         }
         for (int i = 0; i < characterTempletes.Length; i++)
         {
             if (characterTempletes[i] == null)
             {
-                Debug.LogAssertion($"WeaponTemplate at index {i} is null!");
+                Debug.LogAssertion($"Character at index {i} is null!");
                 continue;
             }
             if (characterTempletes[i].Character == null)
             {
-                Debug.LogAssertion($"WeaponTemplete inventoryItem at {i} index is null!!!!");
+                Debug.LogAssertion($"Character character at {i} index is null!!!!");
             }
             libary.AddCharacter(characterTempletes[i].Character);
         }
@@ -533,7 +551,6 @@ public class AllLibary : MonoBehaviour
         }
         return work;
     }
-
     public AttributesTemplete SearchLibaryForAttribute(string name)
     {
         if (string.IsNullOrEmpty(name))
@@ -551,7 +568,7 @@ public class AllLibary : MonoBehaviour
         Debug.Log("No Attribute found");
         return null;
     }
-    public InventoryItem[] SearchLibaryForTemplete(params string[] names)
+    public InventoryItem[] SearchLibaryForInventoryItem(params string[] names)
     {
         if (names == null) return Array.Empty<InventoryItem>();
 
@@ -576,7 +593,7 @@ public class AllLibary : MonoBehaviour
         }
         return work;
     }
-    public InventoryItem SearchLibaryForTemplete(string name)
+    public InventoryItem SearchLibaryForInventoryItem(string name)
     {
         if (string.IsNullOrEmpty(name))
         {
@@ -626,7 +643,7 @@ public class AllLibary : MonoBehaviour
         {
             return temp;
         }
-        Debug.Log("No Entities found");
+        Debug.Log("No Entity found");
         return null;
     }
     public EntityTemplete[] SearchLibaryForEntities(params string[] name)
@@ -649,7 +666,7 @@ public class AllLibary : MonoBehaviour
         for (int i = 0; i < name.Length; i++)
         {
             Debug.Log($"Name of object: {name[i]}");
-            Character temp = libary.GetCharacter(name[i]);
+            Character temp = new Character(libary.GetCharacter(name[i]));
             if (temp != null)
             {
                 work[i] = temp;
@@ -659,7 +676,7 @@ public class AllLibary : MonoBehaviour
     }
     public Character SearchLibaryForCharacter(string name)
     {
-        return libary.GetCharacter(name);
+        return new Character(libary.GetCharacter(name));
     }
     public void AddAttribute(params AttributesTemplete[] templetes)
     {
@@ -676,7 +693,7 @@ public class AllLibary : MonoBehaviour
             SetupAmmo();
             SetupItems(); //Run Items
             //Run Quests;
-            SetupEntities(); //Run Entities
+            SetupEntities(); //Run Entity
             SetupCharacter();
         }
         else

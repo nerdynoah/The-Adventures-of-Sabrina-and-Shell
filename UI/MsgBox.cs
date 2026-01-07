@@ -221,18 +221,31 @@ public class MsgBox : MonoBehaviour
     /// <param name="item"></param>
     public void SetAmmo(InventoryItem item)
     {
-        if (item.GetItemType() == Enums.ItemType.Weapon)
+        if (item != null && item.GetItemType() == Enums.ItemType.Weapon)
         {
-            Weapon rockTMP = item.GetItem<Weapon>();
-            if(rockTMP.GetUsesAmmo()){
-                TextMsg = $"{rockTMP.GetAmmoCount()}/{rockTMP.GetMaxAmmo()}";
-            }
-            else 
+            try
             {
-                TextMsg = $"Can Fire: {rockTMP.GetCanFire(false)}";
+                Weapon rockTMP = item.GetItem<Weapon>();
+                if (rockTMP == null)
+                {
+                    TextMsg = "";
+                }
+                if (rockTMP.GetUsesAmmo())
+                {
+                    TextMsg = $"{rockTMP.GetAmmoCount()}/{rockTMP.GetMaxAmmo()}";
+                }
+                else
+                {
+                    TextMsg = $"Throwable: {rockTMP.GetCanFire(false)}";
+                }
             }
+            catch 
+            {
+                TextMsg = "";
+            }
+            
         }
-        if (item.GetItemType() == Enums.ItemType.Item)
+        if (item != null && item.GetItemType() == Enums.ItemType.Item)
         {
             TextMsg = $"{item.GetItem().GetDesc()}";
         }

@@ -1,6 +1,6 @@
 using UnityEngine;
 /// <summary>
-/// Holds all of the Enumorators and Severeal methods protaining to the Camera and player defaults.
+/// Holds all of the Enumorators and Severeal methods protaining to the Camera and Player defaults.
 /// </summary>
 public class Enums
 {
@@ -37,7 +37,7 @@ public class Enums
         Rewarded        // Completed and rewarded
     }
     /// <summary>
-    /// Entities Algorithm based off of Vision.
+    /// Entity Algorithm based off of Vision.
     /// </summary>
     public enum VisionType
     {
@@ -79,7 +79,7 @@ public class Enums
         /// </summary>
         Grappled,
         /// <summary>
-        /// Heals the player
+        /// Heals the Player
         /// </summary>
         Healing,
         /// <summary>
@@ -98,6 +98,10 @@ public class Enums
         /// Jump alter,
         /// </summary>
         Jump,
+        /// <summary>
+        /// Adjust your size.
+        /// </summary>
+        Bigger,
 
     }
     #endregion
@@ -242,7 +246,7 @@ public class Enums
         /// </summary>
         Armor,
         /// <summary>
-        /// Uses <see cref="BaseCharacter.Items.Ammo"/>
+        /// Uses <see cref="BaseCharacter.Items.Projectile"/>
         /// </summary>
         Ammo,
         /// <summary>
@@ -270,7 +274,7 @@ public class Enums
         None = 0,
         Copy,
         /// <summary>
-        /// Whisper a message to a player
+        /// Whisper a message to a Player
         /// </summary>
         Whisper,
         /// <summary>
@@ -295,7 +299,7 @@ public class Enums
         //End of unused Commands
         New,
         /// <summary>
-        /// Force a <see cref="BaseCharacter.Entities.Player"/> to jump
+        /// Force a <see cref="BaseCharacter.Entity.Player"/> to jump
         /// </summary>
         Jump,
         /// <summary>
@@ -354,13 +358,15 @@ public class Enums
         /// </summary>
         LookingAt = 2, // @L
         /// <summary>
-        /// @D
+        /// @D{value}
         /// </summary>
         Distance = 4, // @D
         /// <summary>
         /// @C
         /// </summary>
         Closest = 8, // @C
+
+        //Combinding @CD will give it to the closest person within a distance.
     }
     #endregion
     #region Camera

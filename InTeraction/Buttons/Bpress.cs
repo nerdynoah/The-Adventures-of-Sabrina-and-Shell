@@ -54,7 +54,7 @@ public class Bpress : MonoBehaviour
         }
     }
     /// <summary>
-    /// Setup the Invenotry when the player presses Inventory.
+    /// Setup the Invenotry when the Player presses Inventory.
     /// </summary>
     /// <param name="id"></param>
     /// <param name="position"></param>

@@ -2,15 +2,9 @@ using UnityEngine;
 
 public class PlayerShadow : MonoBehaviour
 {
-
-    Vector3 direction = Vector3.down;
-    [SerializeField] SpawnShadow spawnShadow;
-    private float Speed;
-
-    public void SetSpeed(float speed)
-    {
-        Speed = speed;
-    }
+    private Vector3 direction = Vector3.down;
+    [SerializeField] private SpawnShadow spawnShadow;
+    [SerializeField][Range(0f,0.25f)] private float ShadowStaysFor = 0.12f;
 
     // Update is called once per frame
     void Update()

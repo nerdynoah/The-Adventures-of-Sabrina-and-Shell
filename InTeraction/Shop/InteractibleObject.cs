@@ -16,7 +16,7 @@ public class BuyableObject : MonoBehaviour
 
     public void Start()
     {
-        Temp = AllLibary.ItemLibary.SearchLibaryForTemplete(weaponName);
+        Temp = AllLibary.ItemLibary.SearchLibaryForInventoryItem(weaponName);
         ShowIcon();
         ShowText();
         

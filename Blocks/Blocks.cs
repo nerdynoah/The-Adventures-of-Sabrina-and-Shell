@@ -7,16 +7,16 @@ using static Enums;
 
 public class Blocks : MonoBehaviour
 {
-    private Rigidbody body;
-    private HurtBox hurtBox;
-    private InventoryItem item;
-    private readonly float GAMEDELAY = 0.025f;
-    private float delay = 0;
-    private bool toDestory = false;
+    protected Rigidbody body;
+    protected HurtBox hurtBox;
+    protected InventoryItem item;
+    protected readonly float GAMEDELAY = 0.025f;
+    protected float delay = 0;
+    protected bool toDestory = false;
     public float Weight { get; private set; }
-    public bool IsPickable { get; private set; } = true;
+    [SerializeField] private bool IsPickable = true;
     // Start is called before the first frame update
-    void Start()
+    protected void Start()
     {
         body = GetComponent<Rigidbody>();
         hurtBox = GetComponent<HurtBox>();
@@ -87,7 +87,7 @@ public class Blocks : MonoBehaviour
         }
         
     }
-    public InventoryItem GetInventoryItem(bool destoryItem)
+    public virtual InventoryItem GetInventoryItem(bool destoryItem)
     {
         if (IsPickable)
         {
@@ -98,11 +98,10 @@ public class Blocks : MonoBehaviour
                 {
                     Destroy(gameObject, 0.07f);
                     toDestory = true;
-                    return item;
+                    return new InventoryItem(item);
                 }
-                return item;
+                return new InventoryItem(item);
             }
-            return null;
         }
         return null;
     }

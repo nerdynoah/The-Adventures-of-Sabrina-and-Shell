@@ -15,7 +15,7 @@ public class EntitySpawner : MonoBehaviour
     [Header("Leveling")]
     [SerializeField] private int MaxLevel;
     [SerializeField] private int MinLevel;
-    [Header("Spawn Conditions Entities")]
+    [Header("Spawn Conditions Entity")]
     [SerializeField][Min(1)] private int MaxSpawn;
     [SerializeField] private int SpawnPerTime;
     [Space(15)]
@@ -42,7 +42,7 @@ public class EntitySpawner : MonoBehaviour
             }
             if (searchFor[i] == SearchFor.InventoryItem)
             {
-                inventoryItems.Add(AllLibary.ItemLibary.SearchLibaryForTemplete(Name[i]));
+                inventoryItems.Add(AllLibary.ItemLibary.SearchLibaryForInventoryItem(Name[i]));
             }
             if (searchFor[i] == SearchFor.Attributes)
             {
@@ -59,7 +59,7 @@ public class EntitySpawner : MonoBehaviour
                 Vector3 spawnLocation = transform.position + new Vector3(Methods.GetRandomNegativePositive(box.size.x), Methods.GetRandomNegativePositive(box.size.y), Methods.GetRandomNegativePositive(box.size.z));
                 GameObject entity = Instantiate(enemyTMP[i].gameObject, spawnLocation, transform.rotation);
                 EntityTemplete temp = entity.GetComponent<EntityTemplete>();
-                temp.player.ApplyAttribute(attributesTempletes[i]);
+                temp.Player.ApplyAttribute(attributesTempletes[i]);
             }
             spawns++;
             if (spawns >= MaxSpawn)

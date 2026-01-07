@@ -19,7 +19,7 @@ public class FixedRotationCamera : MonoBehaviour
 
         if (playerTransform == null)
         {
-            Debug.LogError("FixedRotationCamera must be a child of the player object!");
+            Debug.LogError("FixedRotationCamera must be a child of the Player object!");
             return;
         }
 

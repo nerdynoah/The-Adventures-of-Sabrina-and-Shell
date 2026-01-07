@@ -55,7 +55,6 @@ public class WeaponTemplete : MonoBehaviour
         if (UsesAmmo)
         {
             rockTMP = new Weapon(Name, WeaponClass, AttackDelay, AttackDelay, Damage, Aim, OneAtATimeReload, ReloadSpeed, AmountOfAmmo);
-            rockTMP.SetAcceptableAmmo(AdditinoalPiercing, AllowedAmmo);
         }
         else
         {
@@ -66,6 +65,7 @@ public class WeaponTemplete : MonoBehaviour
         {
             rockTMP.SetBulletPattern(Rows, Columns, Distance);
         }
+        rockTMP.SetAcceptableAmmo(AdditinoalPiercing, AllowedAmmo);
         rockTMP.SetEffect(FindAttributeInLibary);
         rockTMP.SetAnimations(Animations, cuts, type, effects);
         return rockTMP;

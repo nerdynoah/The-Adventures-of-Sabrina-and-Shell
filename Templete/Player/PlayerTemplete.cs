@@ -1,17 +1,16 @@
+using BaseCharacter.Entity;
 using BaseCharacter;
-using BaseCharacter.Entities;
 using BaseCharacter.Movement;
 using BaseCharacter.Stats;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Burst.Intrinsics;
 using UnityEngine;
 using static Enums;
 public class CharacterTemplete : MonoBehaviour
 {
     [Header("Character Info")]
     [SerializeField] Texture icon;
-    [SerializeField][Tooltip("Name of the character. Used in search via the AllLibary class. This will not override a player's name unless specified otherwise")] private string Name;
+    [SerializeField][Tooltip("Name of the character. Used in search via the AllLibary class. This will not override a Player's name unless specified otherwise")] private string Name;
     [SerializeField][TextArea(3, 8)] private string Description;
     [Header("Health")]
     [SerializeField][Min(1)] private int MaxHealth = 50;
@@ -20,7 +19,7 @@ public class CharacterTemplete : MonoBehaviour
     [SerializeField] private WeaponClass[] resistances;
     [SerializeField][Range(0f, 2f)] private float[] resistancePower;
     [Header("Inventory")]
-    [SerializeField][Min(0)][Tooltip("Not used in entites. Strictly used by the player")] private int HotbarSize = 9;
+    [SerializeField][Min(0)][Tooltip("Not used in entites. Strictly used by the Player")] private int HotbarSize = 9;
     [SerializeField][Min(1)][Tooltip("How many InventoryItems can you hold")] private int InventorySize = 35;
     [Header("Weight")]
     [SerializeField][Min(100f)][Tooltip("1000 weight = 10 KG")] private float Weight = 5000f;
@@ -54,6 +53,7 @@ public class CharacterTemplete : MonoBehaviour
     [SerializeField][Min(0f)] private float GpoundForce = 100;
     [SerializeField][Min(0f)] private float incrementByLevelGpounds = 0.1f;
     [Header("Vision")]
+    [SerializeField] private CameraMode CameraMode = CameraMode.FirstPerson;
     [SerializeField][Min(0f)] private float Vision = 100f;
     [SerializeField] private float incrementByLevelVision = 0.1f;
     [Header("Aim")]
@@ -81,7 +81,7 @@ public class CharacterTemplete : MonoBehaviour
         gRDPound = new GRDPound((byte)AmountOfGroundPounds);
         jumpSystem = new JumpSystem(AmountOfJumps, AmountOfMurderJumps, MurderJumpStrength);
         airmovement = new AirMovement(AccelerationMultiplier, GroundDrag, AirDrag, AirealPowerSide, AirealPowerFoward);
-        player = new Player(Name,Description,InventorySize);
+        player = new Player(Name,Description,InventorySize,Weight,0);
         player.SetupHotbar(HotbarSize);
         health = new StatHealth("Health", MaxHealth, IncrimentPerLevelHealth, MaxHealth * StartingHealthPercent);
         health.SetResistance(resistances, resistancePower);
@@ -92,7 +92,7 @@ public class CharacterTemplete : MonoBehaviour
         aim = new Stat("Aim", Aim, incrementByLevelAim);
         player.SetupStats(health, speed, jump, gPound, vision,aim);
         player.SetupMovement(gravityStrength,AcclerationSpeed,BreakingSpeed,gravityProtectionTime);
-        return new Character(player, move, gRDPound, jumpSystem, airmovement, Weight, JumpDelay);
+        return new Character(Name, player, move, gRDPound, jumpSystem, airmovement, JumpDelay);
     }
 
 }

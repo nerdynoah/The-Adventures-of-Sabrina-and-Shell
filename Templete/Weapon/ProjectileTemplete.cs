@@ -8,7 +8,7 @@ public class ProjectileTemplete : MonoBehaviour
     [Header("Stats")]
     [Tooltip("Mulitplied by the gravity of the world")]
     [SerializeField] private float Gravity;
-    [SerializeField][Min(0.0001f)] private float Speed;
+    [SerializeField][Min(0f)] private float Speed;
     [SerializeField][Min(0.05f)] private float LiveTime;
     [Tooltip("-100 on collision with hurtboxes, -1 on collision of anything else.")]
     [SerializeField][Min(1)] private int Piercing;
@@ -38,12 +38,19 @@ public class ProjectileTemplete : MonoBehaviour
     [SerializeField] private string[] Attributes;
     [SerializeField] private GameObject SphereicalObject;
     [SerializeField] private float Damage;
+    [SerializeField] private bool ShooterIsImmune = false;
     /// <summary>
     /// 
     /// </summary>
     /// <returns>A new <see cref="Projectile"/></returns>
     public Projectile GetProjectile()
     {
-        return new Projectile(Gravity, Yeet, Speed, LiveTime, Piercing, Size, Weight, Damage, StartFallOffDistace, EndFallOffDistance, DamageAfterMaxFallOff, ExplosiveSize,ExplosiveTime,SmallExplosiveSize,ExplosiveMinPercentFalloff, KnockBack, SphereicalObject);
+        Attributes ??= new string[0];
+        return new Projectile(
+            Gravity, Yeet, Speed, LiveTime,
+            Piercing, Size, Weight, Damage,
+            StartFallOffDistace, EndFallOffDistance, DamageAfterMaxFallOff,
+            ExplosiveSize, ExplosiveTime, SmallExplosiveSize, ExplosiveMinPercentFalloff,
+            KnockBack, SphereicalObject, ShooterIsImmune, Attributes);
     }
 }

@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "NewPlayerControls", menuName = "Game/player Controls")]
+[CreateAssetMenu(fileName = "NewPlayerControls", menuName = "Game/Player Controls")]
 public class ControlsScheme : ScriptableObject
 {
     [Header("Movement")]

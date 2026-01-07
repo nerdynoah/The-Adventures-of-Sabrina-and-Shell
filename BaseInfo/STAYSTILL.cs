@@ -1,5 +1,10 @@
 using UnityEngine;
 
+/// <summary>
+/// This goddess forsaken class is the only thing that kept me from losing my mind when using rigibodies omfg.
+/// <br></br>
+/// Use this to force a child gameobject inside a parent with a rigibody to not move after colliding.
+/// </summary>
 public class STAYSTILL : MonoBehaviour
 {
     [SerializeField] private float fixedRotation = 0f;
@@ -19,7 +24,7 @@ public class STAYSTILL : MonoBehaviour
 
         if (playerTransform == null)
         {
-            Debug.LogError("FixedRotationCamera must be a child of the player object!");
+            Debug.LogError("FixedRotationCamera must be a child of the Player object!");
             return;
         }
         transform.rotation = Quaternion.Euler(0, 0, fixedRotation);

@@ -1,12 +1,11 @@
 using BaseCharacter;
-using BaseCharacter.Entities;
+using BaseCharacter.Entity;
 using BaseCharacter.Items;
 using BaseCharacter.Movement;
 using BaseCharacter.Structual;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Internal;
 using static Enums;
 
 public class EntityTemplete : MonoBehaviour
@@ -16,38 +15,16 @@ public class EntityTemplete : MonoBehaviour
     [SerializeField] private CapsuleCollider outline; 
     [SerializeField] private string Name;
     [SerializeField][TextArea(4,8)] private string Desc;
+    [SerializeField] private string PresetCharacterName;
     [Header("Level and EXP")]
     [SerializeField][Min(0)] private int BaseLevel = 0;
     [SerializeField] private int BaseEXPDrop = 1;
     [SerializeField] private int increasePerLevel = 1;
     [Header("Health")]
-    [SerializeField][Min(1)] private int MaxHealth;
     [SerializeField][Range(0f, 1f)] private float StartingHealthPercent = 1;
-    [SerializeField][Min(0f)] private float AdranalineDistance = 0f;
-    [SerializeField][Min(0f)] private float Adranaline = 0f;
     [Space(22)]
     [SerializeField] private WeaponClass[] wpnClass = new WeaponClass[Enum.GetValues(typeof(WeaponClass)).Length];
     [SerializeField] private int[] Resistances = new int[Enum.GetValues(typeof(WeaponClass)).Length];
-    [Header("Movement")]
-    [SerializeField] private float Speed = 35f;
-    [SerializeField] private float RotationSpeed = 7f;
-    [SerializeField][Range(0.7f,0.9999f)] private float BreakingSpeed = 0.97f;
-    [SerializeField][Range(0f,180f)] private float maxSlopeAngle = 79f;
-    [Tooltip("100 weight = 1 KG")]
-    [SerializeField][Min(10f)] private float Weight = 1000f;
-    [Header("Jumps")]
-    [SerializeField] private float JumpAmount = 32f;
-    [SerializeField][Min(0)] private int AllowedJumps = 1;
-    [SerializeField][Min(0)] private int MidAirJumps = 1;
-    [SerializeField][Range(0f,2f)] private float MidAirJumpsMultiplyer = 0.8f;
-    [Header("Gravity")]
-    [SerializeField] private float GravityMultiplied = 3f;
-    [SerializeField] private float GroundPound = 100f;
-    [SerializeField][Min(0)] private byte AmountOfGroundPounds = 1;
-    [SerializeField] private float FallDamageProtectionTime = 1f;
-    [Header("Sight and AIM")]
-    [SerializeField][Min(0f)] private float Vision = 80f;
-    [SerializeField][Min(0f)] private float AIM = 0f;
     [Header("Items, Effect, and Things")]
     [SerializeField] private string[] FindInventoryItemsInLibary;
     [SerializeField] private string[] FindAttributeInLibary;
@@ -65,66 +42,65 @@ public class EntityTemplete : MonoBehaviour
     [SerializeField] private FiveSenses brain;
     [SerializeField] private PathMode DefaultPathMode;
     [SerializeField] private WanderMode wanderMode;
-    public Player player { get; private set; }
-    private JumpSystem jumpSys;
-    private MovingSystemKeyboard moveSys;
-    private GRDPound gPound;
-    private AirMovement airMent;
+    public Character character = new Character(Classes.Vampire);
+    private MovingSystemKeyboard moveSys => character.MoveSys;
+    private JumpSystem jumpSys => character.JumpSys;
+    private GRDPound gPound => character.Gpound;
+    private AirMovement airMent => character.AirMent;
+    public Player Player { get => character.Player; private set { character.SetPlayer(value); } }
     private WorldRun worldRun;
     private float FastestFall;
     private bool isGrounded = true;
-    private readonly float JUMPDELAY = 0.125f;
-    private float jumpDelay;
+    private float maxSlopeAngle = 80;
+    public bool Ready { get; private set; } = false;
     private float Gravity
     {
         get
         {
-            return player.Gravity * worldRun.Gravity;
+            return Player.Gravity * worldRun.Gravity;
         }
     }
     
     public void Init()
     {
-        moveSys = new MovingSystemKeyboard(0.1f, 0.6f, 0.8f, 1.05f, 0.38f, 0.35f);
-        gPound = new GRDPound(AmountOfGroundPounds);
-        airMent = new AirMovement(1.285f, 0.68f, 0.185f);
-        player = new(Name, Desc, MaxHealth, StartingHealthPercent, Weight, Vision, AIM, ExtraItemSlots, Adranaline);
-        player.SetupMovement(Speed, JumpAmount, GroundPound, GravityMultiplied, RotationSpeed, BreakingSpeed, FallDamageProtectionTime);
         for (int i = 0; i < Enum.GetValues(typeof(WeaponClass)).Length; i++)
         {
-            player.SetupResistance(wpnClass[i], Resistances[i]);
+            Player.SetupResistance(wpnClass[i], Resistances[i]);
         }
-        player.SetupHotbar(player.GetInventorySize(),0);
-        body.mass = player.Weight / 100f;
-        jumpSys = new JumpSystem(AllowedJumps, 0,MidAirJumpsMultiplyer);
+        Player.SetupHotbar(Player.GetInventorySize(),0);
+        body.mass = Player.Weight / 100f;
+        //jumpSys = new JumpSystem(AllowedJumps, 0,MidAirJumpsMultiplyer);
         for (int i = 0; i < FindInventoryItemsInLibary.Length; i++)
         {
-            player.AddItem(AllLibary.ItemLibary.SearchLibaryForTemplete(FindInventoryItemsInLibary[i]));
+            Player.AddItem(AllLibary.ItemLibary.SearchLibaryForInventoryItem(FindInventoryItemsInLibary[i]));
         }
         for (int i = 0; i < FindAttributeInLibary.Length; i++)
         {
             if (ApplyAttributesRandomly && Methods.RandomValue(ApplyAttributesRNGrate) < ApplyAttributesRNGrate) //Apply attributes
             {
-                player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(FindAttributeInLibary[i]));
+                Player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(FindAttributeInLibary[i]));
             }
             else if (!ApplyAttributesRandomly)
             {
-                player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(FindAttributeInLibary[i]));
+                Player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(FindAttributeInLibary[i]));
             }
         }
-        body.mass = player.Weight / 100f;
+        body.mass = Player.Weight / 100f;
+        character.SetEnemy(StartingHealthPercent);
     }
-    protected Vector3 interestLocation;
     private void Start()
     {
         worldRun = WorldRun.Instance;
+        character = new Character(AllLibary.ItemLibary.SearchLibaryForCharacter(PresetCharacterName),new Player(Name, ExtraItemSlots + FindInventoryItemsInLibary.Length));
         Init();
-        interestLocation = transform.position;
+        Ready = true;
     }
     private void Awake()
     {
         worldRun = WorldRun.Instance;
+        character = new Character(AllLibary.ItemLibary.SearchLibaryForCharacter(PresetCharacterName));
         Init();
+        Ready = true;
     }
     private void GetHurtBoxData()
     {
@@ -135,151 +111,38 @@ public class EntityTemplete : MonoBehaviour
             {
                 if (apply[i].Request == CommandRequest.Attributes)
                 {
-                    player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(apply[i].DataString));
+                    Player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(apply[i].DataString));
                 }
                 if (apply[i].Request == CommandRequest.Damage)
                 {
-                    player.Health.DamagePlayer(apply[i].DataFloat[0], (WeaponClass)(int)apply[i].DataFloat[1]);
+                    Player.Health.DamagePlayer(apply[i].DataFloat[0], (WeaponClass)(int)apply[i].DataFloat[1]);
                 }
                 if (apply[i].Request == CommandRequest.Knockback)
                 {
-                    body.AddForce(apply[i].Knockback.GetKnockback(player.Weight, transform.position));
-                    body.AddForce(0, apply[i].Knockback.GetYKnockback(player.Weight), 0);
+                    body.AddForce(apply[i].Knockback.GetKnockback(Player.Weight, transform.position));
+                    body.AddForce(0, apply[i].Knockback.GetYKnockback(Player.Weight), 0);
                 }
             }
             hurtBox.ClearQueue();
         }
     }
     public string GetName() { return Name; }
-    private bool moveGpound = false;
-    private bool moveJump = false;
-    private bool moveFoward = true;
-    private bool moveBackwords = false;
-    private bool moveLeft = false;
-    private bool moveRight = false;
-    private bool moveBreak = false;
     private void Update()
     {
         GetHurtBoxData();
-        if (moveJump)
-        {
-            Jump(isGrounded);
-        }
-        if (moveGpound)
-        {
-            Crouching(isGrounded);
-        }
-        KeyPress();
-        if (!player.Health.GetIsAlive())
+        if (!Player.Health.GetIsAlive())
         {
             Destroy(gameObject);
             return;
-        }
-        WanderToPoint();
-        MoveAtRandom();
-    }
-    
-    private void WanderToPoint()
-    {
-        if (Vector3.Distance(transform.position, interestLocation) < outline.radius + 1)
-        {
-            interestLocation = brain.GetInFront(player.Vision);
-        }
-    }
-    private void MoveAtRandom()
-    {
-        int num = UnityEngine.Random.Range(0, 10001);
-        if (num > 100)
-        {
-            moveFoward = true;
-        }
-        else
-        {
-            moveFoward = false;
-        }
-        if (num < 300)
-        {
-            moveBackwords = true;
-        }
-        if (num > 500)
-        {
-            moveBackwords = false;
-        }
-        if (num > 8000)
-        {
-            moveLeft = true;
-        }
-        if (num < 7000)
-        {
-            moveLeft = false;
-        }
-        if (num > 6000 && num < 8000)
-        {
-            moveRight = true;
-        }
-        else if (num > 5000)
-        {
-            moveRight = false;
-        }
-        if (num > 9999)
-        {
-            moveGpound = true;
-        }
-        else
-        {
-            moveGpound = false;
-        }
-        if (num > 3000 && num < 6000)
-        {
-            moveJump = true;
-        }
-        else
-        {
-            moveJump = false;
-        }
-    }
-    private void KeyPress()
-    {
-        if (moveFoward)
-        {
-            moveSys.HandleKeyInput(MoveStates.OnHold, MovingDirection.Up);
-        }
-        else
-        {
-            moveSys.HandleKeyInput(MoveStates.OnRelease, MovingDirection.Up);
-        }
-        if (moveBackwords)
-        {
-            moveSys.HandleKeyInput(MoveStates.OnHold, MovingDirection.Down);
-        }
-        else
-        {
-            moveSys.HandleKeyInput(MoveStates.OnRelease, MovingDirection.Down);
-        }
-        if (moveLeft)
-        {
-            moveSys.HandleKeyInput(MoveStates.OnHold, MovingDirection.Left);
-        }
-        else
-        {
-            moveSys.HandleKeyInput(MoveStates.OnRelease, MovingDirection.Left);
-        }
-        if (moveRight)
-        {
-            moveSys.HandleKeyInput(MoveStates.OnHold, MovingDirection.Right);
-        }
-        else
-        {
-            moveSys.HandleKeyInput(MoveStates.OnRelease, MovingDirection.Right);
         }
     }
     /// <summary>
     /// Checks if your grounded.
     /// </summary>
     /// <remarks>
-    /// Code partially made from https://discussions.unity.com/t/how-do-i-properly-detect-if-the-player-is-grounded/1545895/5
+    /// Code partially made from https://discussions.unity.com/t/how-do-i-properly-detect-if-the-Player-is-grounded/1545895/5
     /// </remarks>
-    private bool CheckGrounded()
+    public bool CheckGrounded()
     {
         if (body.velocity.y > -1 * Gravity)
         {
@@ -295,7 +158,7 @@ public class EntityTemplete : MonoBehaviour
             // Check if we're on stable ground
             float angle = Vector3.Angle(Vector3.up, hits[i].normal);
             bool isStableOnGround = angle <= maxSlopeAngle;
-            FallDamage(isStableOnGround, player.GravityProtectionTime, 100, 10);
+            FallDamage(isStableOnGround, Player.GravityProtectionTime, 100, 10);
             return isStableOnGround;
         }
         return false;
@@ -329,12 +192,7 @@ public class EntityTemplete : MonoBehaviour
         //Vector3 forwardDirection = new Vector3(direct.x, 0, direct.z).normalized;
         Vector3 MoveDirection = direct * delta.z + Quaternion.Euler(0, 90, 0) * direct * delta.x;
         //float horizontalMagnitude = new Vector3(body.velocity.x, 0, body.velocity.z).magnitude;
-
-        if (moveBackwords && !isGrounded)
-        {
-            body.velocity = new Vector3(body.velocity.x * player.BreakingSpeed, body.velocity.y, body.velocity.z * player.BreakingSpeed);
-        }
-        Vector3 Speed = Time.fixedDeltaTime * player.Speed * MoveDirection;
+        Vector3 Speed = Time.fixedDeltaTime * Player.Speed * MoveDirection;
         Vector3 Rotation;
         body.drag = isGrounded ? airMent.GroundDrag : airMent.AirDrag;
         body.AddRelativeForce(Speed, ForceMode.VelocityChange);
@@ -345,12 +203,13 @@ public class EntityTemplete : MonoBehaviour
         }
         body.AddRelativeForce(new Vector3(0, Gravity, 0), ForceMode.Acceleration);
         //Debug.Log($"Body.Velocity {body.velocity}");
-        player.ApplyStatAdjustments();
+        Player.ApplyStatAdjustments();
+        Player.ApplyAllEffects();
     }
 
     private bool TookDamage = false;
     /// <summary>
-    /// Calculates fall damage based on -Body.Velocity.y. <code>(Damage = Gravity * <paramref name="gravProt"/> - <see cref="BaseCharacter.Player.GetGroundPound()"/> - <see cref="BaseCharacter.Player.Jump"/>)/(<paramref name="div"/>)</code>
+    /// Calculates fall damage based on -Body.Velocity.y. <code>(Damage = Gravity * <paramref name="gravProt"/> - <see cref="BaseCharacter.Entity.GetGroundPound()"/> - <see cref="BaseCharacter.Entity.Jump"/>)/(<paramref name="div"/>)</code>
     /// </summary>
     /// <param name="isGrounded">Is grounded</param>
     /// <param name="gravProt">How many seconds of protection from gravity if moving at GroundPoundSpeed do you get</param>
@@ -359,7 +218,7 @@ public class EntityTemplete : MonoBehaviour
     {
         if (isGrounded && !TookDamage)
         {
-            float damageProt = Gravity * gravProt - player.GroundPound - player.Jump - player.Speed;
+            float damageProt = Gravity * gravProt - Player.GroundPound - Player.Jump - Player.Speed;
             Debug.Log(-FastestFall + $"Threshold: {-damageProt}");
             float damage = Mathf.Max(-FastestFall + damageProt, 0);
             if (damage > secondaryThresh)
@@ -368,7 +227,7 @@ public class EntityTemplete : MonoBehaviour
             }
             damage /= div;
             Debug.Log(damage);
-            player.Health.DamagePlayer(damage, WeaponClass.World, false, 1f);
+            Player.Health.DamagePlayer(damage, WeaponClass.World, false, 1f);
             TookDamage = true;
             FastestFall = 0;
         }
@@ -384,34 +243,6 @@ public class EntityTemplete : MonoBehaviour
         {
 
         }
-    }
-    /// <summary>
-    /// Crouching
-    /// </summary>
-    /// <param name="isGrounded"></param>
-    private void Crouching(bool isGrounded)
-    {
-        if (moveGpound && !isGrounded && gPound.CanPound())
-        {
-            body.velocity = new Vector3(body.velocity.x, -Mathf.Abs(body.velocity.y), body.velocity.z);
-            body.AddForce(new Vector3(0, -Mathf.Abs(player.GroundPound), 0), ForceMode.VelocityChange);
-        }
-        if (isGrounded)
-        {
-            gPound.Reset();
-        }
-    }
-    /// <summary>
-    /// Attempts to jump.
-    /// </summary>
-    /// <param name="isGrounded"></param>
-    /// <returns></returns>
-    private float Jump(bool isGrounded, float jump = 1)
-    {
-        float value = jumpSys.Jump(isGrounded, MoveStates.OnPress);
-        jumpDelay = JUMPDELAY + Time.time;
-        moveJump = false;
-        return value;
     }
 
 }
