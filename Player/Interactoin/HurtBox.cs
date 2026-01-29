@@ -36,6 +36,7 @@ public class HurtBox : MonoBehaviour
     public GameObject ApplyDamage(int id, string name, int priority, float damage, WeaponClass wpnclass)
     {
         queue.Add(new QueueInfo(id, name, priority, CommandRequest.Damage, damage, (int)wpnclass));
+        Debug.Log($"Damage: {damage}");
         return gameObject;
     }
     public void ApplyAttributes(int id, string name, int priority, Effect[] effect)

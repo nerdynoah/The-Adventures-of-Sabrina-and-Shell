@@ -17,7 +17,7 @@ public class SPINNN : MonoBehaviour
     /// <param name="mult"></param>
     protected void FindRotation(int rotationRNG, float mult)
     {
-        transform.Rotate(0, Methods.RandomValue(rotationRNG) * mult, 0);
+        transform.Rotate(0, Methods.RandomValuePositive(rotationRNG) * mult, 0);
     }
    
 }

@@ -3,7 +3,7 @@ using BaseCharacter.Movement;
 using UnityEngine;
 using static Enums;
 
-public class Movement : MonoBehaviour
+public class Movement : MonoBehaviour, IRayShoot
 {
     [Header("References")]
     [SerializeField] Transform target;
@@ -38,14 +38,14 @@ public class Movement : MonoBehaviour
     private Vector3 ThirdDistance;
     private float rotV;
     private float horizontalRot;
-    
+
 
     // Top-down rotation variables
     private bool isRotatingTopDown = false;
     private Vector3 lastMousePosition;
     private float currentRotationY = 0f;
     private float currentTiltX = 89f;
-    
+
 
     void Start()
     {
@@ -95,7 +95,7 @@ public class Movement : MonoBehaviour
         }
     }
     public void ZoomScroll(float amount)
-    { 
+    {
         cam.fieldOfView += amount * 50f;
         if (cam.fieldOfView < 70f)
         {
@@ -163,7 +163,7 @@ public class Movement : MonoBehaviour
 
     void HandleTopDownZoom()
     {
-        
+
         if (Input.GetKey(KeyCode.Plus))
         {
             topDownHeight = Mathf.Clamp(topDownHeight + zoomSpeed * Time.deltaTime, minZoom, maxZoom);
@@ -381,7 +381,7 @@ public class Movement : MonoBehaviour
         Ray ray;
         Ray ogRay;
         Vector3 ogpoint = new Vector3(((GetCamera().pixelWidth) / 2), ((GetCamera().pixelHeight) / 2), 0.5f);
-        Vector3 point = new Vector3(ogpoint.x + Mathf.Max((rngAim + aim),0) * (Random.value - 0.5f), ogpoint.y + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f), ogpoint.z + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f));
+        Vector3 point = new Vector3(ogpoint.x + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f), ogpoint.y + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f), ogpoint.z + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f));
         Vector3 mousePosition = Input.mousePosition;
         Vector3 ThemousePosition = new Vector3(mousePosition.x + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f), mousePosition.y + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f), mousePosition.z + Mathf.Max((rngAim + aim), 0) * (Random.value - 0.5f));
         if (GetCameraMode() == CameraMode.FirstPerson || GetCameraMode() == CameraMode.ThirdPerson)

@@ -7,21 +7,33 @@ using static Enums;
 
 public class FiveSenses : MonoBehaviour
 {
-    [SerializeField] private Enums.FiveSenses[] inspectionModes = new Enums.FiveSenses[Enum.GetValues(typeof(Enums.FiveSenses)).Length];
-    
-    private List<Vector3> InterestLocations = new List<Vector3>();
-    private int interestLocationIndex = 0;
-    
-
-    public Vector3 GetInFront(float vision)
+    [Header("Eyesight")]
+    [SerializeField] private Eye[] eyeSight;
+    [SerializeField][Min(0.02f)] private float eyeSightUpdateRate = 0.02f;
+    [SerializeField][Min(0)] private float personalSpace;
+    [Header("Hearing")]
+    [SerializeField] private Ear[] ears;
+    [Header("Smell")]
+    [SerializeField] private Nose nose;
+    [SerializeField] private SummonStench summonStench;
+    [Header("Touch")]
+    [SerializeField] private Collider col;
+    public float GetEyeSightUpdateRate { get { return eyeSightUpdateRate; } }
+    public Nose GetNose()
     {
-        if (inspectionModes.Contains(Enums.FiveSenses.Vision))
-        {
-            Ray ray = new Ray();
-            Physics.Raycast(ray, out RaycastHit hit, vision);
-            return hit.point;
-        }
-        return transform.position;
+        return nose;
     }
-    
+    private void Start()
+    {
+        
+    }
+    private void Update()
+    {
+        
+    }
+    private void FixedUpdate()
+    {
+
+    }
+
 }

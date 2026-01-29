@@ -1,4 +1,3 @@
-using BaseCharacter;
 using BaseCharacter.Items;
 using BaseCharacter.Structual;
 using System.Collections.Generic;
@@ -9,7 +8,7 @@ public class Blocks : MonoBehaviour
 {
     protected Rigidbody body;
     protected HurtBox hurtBox;
-    protected InventoryItem item;
+    protected InventorySystem invSystem = new InventorySystem();
     protected readonly float GAMEDELAY = 0.025f;
     protected float delay = 0;
     protected bool toDestory = false;
@@ -41,7 +40,7 @@ public class Blocks : MonoBehaviour
                 {
                     if (apply[i].Request == CommandRequest.Knockback)
                     {
-                        //body.AddForce(apply[i].Knockback.GetKnockback(weight * 1000, transform.position));
+                        body.AddForce(apply[i].Knockback.GetKnockback(Mathf.Max(Weight * 1000,5500), transform.position));
                     }
                 }
                 hurtBox.ClearQueue();
@@ -56,19 +55,21 @@ public class Blocks : MonoBehaviour
     /// <param name="Weight"></param>
     public void SetupBox(InventoryItem item, float Weight)
     {
-        this.item = item;
+        invSystem.AddInventorySpaces(1);
+        invSystem.FillNullInventory(invSystem.GetInventorySize()-1);
+        invSystem.AddItem(item);
         this.Weight = Weight;
         IsPickable = true;
         if (Weight < 1)
         {
             try
             {
-                body.mass = Mathf.Max(Weight * 10, 1);
+                body.mass = Mathf.Max(Weight * 50, 1);
             }
             catch (System.Exception e)
             {
                 body = GetComponent<Rigidbody>();
-                body.mass = Mathf.Max(Weight * 10, 1);
+                body.mass = Mathf.Max(Weight * 50, 1);
                 Debug.LogWarning(e);
             }
         }
@@ -76,33 +77,41 @@ public class Blocks : MonoBehaviour
         {
             try
             {
-                body.mass = Mathf.Max(Weight, 10);
+                body.mass = Mathf.Max(Weight, 25);
             }
             catch (System.Exception e)
             {
                 body = GetComponent<Rigidbody>();
-                body.mass = Mathf.Max(Weight, 10);
+                body.mass = Mathf.Max(Weight, 25);
                 Debug.LogWarning(e);
             }
         }
         
     }
-    public virtual InventoryItem GetInventoryItem(bool destoryItem)
+    public virtual List<InventoryItem> GetInventoryItem(bool destoryItem)
     {
         if (IsPickable)
         {
-            Debug.Log($"Getting item: {item.GetName()}");
+            List<InventoryItem> items = new List<InventoryItem>();
+            for (int i = 0; i < invSystem.GetInventorySize(); i++)
+            {
+                items.Add(new InventoryItem(invSystem.GetInventoryItem(i)));
+                Debug.Log(invSystem.GetInventoryItem(i).GetName());
+                if (destoryItem)
+                {
+                    invSystem.DeleteItem(i);
+                }
+            }
             if (!toDestory)
             {
                 if (destoryItem)
                 {
                     Destroy(gameObject, 0.07f);
-                    toDestory = true;
-                    return new InventoryItem(item);
+                    toDestory = true;       
                 }
-                return new InventoryItem(item);
             }
+            return items;
         }
-        return null;
+        return new List<InventoryItem>();
     }
 }

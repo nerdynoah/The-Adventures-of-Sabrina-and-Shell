@@ -1,22 +1,26 @@
 using BaseCharacter;
 using BaseCharacter.Effects;
 using BaseCharacter.Entity;
+using BaseCharacter.FiveSenses.Scent;
 using BaseCharacter.Items;
 using BaseCharacter.Movement;
 using BaseCharacter.Structual;
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using static Enums;
 
-public class Walking : MonoBehaviour
+public class Walking : MonoBehaviour, IHasCharacter
 {
     [Header("Colliion and Phyiscs")]
     [SerializeField] private ReachRange reaching;
     [SerializeField] private Vision vision;
     [SerializeField] private Rigidbody body;
     [SerializeField] private HurtBox hurtBox;
+    [Header("Five Scenes")]
+    [SerializeField] private SummonStench summonStench;
+    [SerializeField] private Nose nose;
     [Header("Player Structure data")]
     [SerializeField] private PlayerShadow shadow;
     [SerializeField] private GameObject[] DistanceFeet;
@@ -29,6 +33,7 @@ public class Walking : MonoBehaviour
     [SerializeField] private ScaleUp scaleUp;
     [SerializeField] private ScaleUp HpBar;
     [SerializeField] private GroundPoundUI scaleDown;
+    [SerializeField] private MovementUI CanAmountJumps;
     [Header("MessageBoxes")]
     [SerializeField] private MsgBox Health;
     [SerializeField] private MsgBox Ammo;
@@ -49,9 +54,11 @@ public class Walking : MonoBehaviour
     private GRDPound gPound => character.Gpound;
     private AirMovement airMent => character.AirMent;
     private Player Player { get => character.Player; set { character.SetPlayer(value); } }
-    private List<InventorySystem> ExtraDisplayCase;
+    private readonly List<InventorySystem> ExtraDisplayCase;
     private float JUMPDELAY => character.JUMPDELAY; //0.128f;
     private readonly float GAMEDELAY = 0.1f;
+    private readonly float SMELLDELAY = 0.5f;
+    private float smellDelay;
     private float jumpDelay;
     private bool InMenu { get; set; } = false;
     private bool InInventory { get; set; } = false;
@@ -65,6 +72,8 @@ public class Walking : MonoBehaviour
         }
     }
     private float FastestFall;
+    public string CharacterName { get { return character.CharacterName; } }
+    
     void Start()
     {
         worldRun = WorldRun.Instance;
@@ -87,7 +96,13 @@ public class Walking : MonoBehaviour
             if (thing != null)
             {
                 character = new Character(thing, new Player(thing.Player, new Player("Nell Shell", "", invoSlots, 5000,100)));
+                Player.FillNullInventory();
                 Player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(attri.ToArray()));
+                for (int i = 0; i < SaveData.GetInventoryItems().Count; i++)
+                {
+                    Player.AddItem(SaveData.GetInventoryItems()[i],i);
+                }
+                Player.SetReachRange(thing.Player.GetReach());
             }
             else
             {
@@ -99,7 +114,7 @@ public class Walking : MonoBehaviour
                     resist[i].Item2 = 1;
                 }
                 Player.SetupResistances(resist);
-                Player.SetReachRange(3);
+                Player.SetReachRange(5);
                 Player.DepositMoney(500);
                 Player.SetupMovement(40f, 24f, 100f, 1f, 0.4f, 0.97f, 1f);
             }
@@ -115,7 +130,7 @@ public class Walking : MonoBehaviour
                 resist[i].Item2 = 1;
             }
             Player.SetupResistances(resist);
-            Player.SetReachRange(3);
+            Player.SetReachRange(5);
             Player.DepositMoney(500);
             Player.SetupMovement(40f, 24f, 100f, 1f, 0.4f, 0.92f, 1f);
         }
@@ -127,8 +142,7 @@ public class Walking : MonoBehaviour
         //UI control
         Health.SetupHealthUI(hpInfo[0], hpInfo[1], 5.2f, 9.01f);
         //Bubbles
-        Player.SetReachRange(3);
-        reaching.SetReach(Player.GetReach());
+        reaching.SetReach(Mathf.Max(Player.GetReach(),5));
         vision.SetSize(Player.Vision);
         SetLoadData(true);
         //Inventory
@@ -136,7 +150,7 @@ public class Walking : MonoBehaviour
 
         //UI scaling
         scaleDown.SetupScale(Mathf.Max(Mathf.Abs(Gravity * 2f),Player.GroundPoundBase.Max * 4.5f,98));
-        scaleUp.SetupScale(Player.JumpBase.Max * 80f);
+        scaleUp.SetupScale(Player.JumpBase.Max * 60f * character.JumpSys.JumpsBase + character.JumpSys.murderJumpsBase);
         Player.ScrollItem(0);
         // Inventory UI visuals.
         invManager.RefreshFullInventory(Player);
@@ -145,9 +159,10 @@ public class Walking : MonoBehaviour
         invManager.RefreshFullInventory(Player);
         invManager.InventoryToggle();
         body.mass = Player.Weight / 100f;
-        generic.AddText("You have loaded in!\rWea are now a fish!\rYou have loaded in!\rWea are now a fish!\rYou have loaded in!\nWea are now a fish!\r", false,1,2);
+        generic.AddText("<b>You</b> have loaded in!\r<i>Wea</i> are now a fish!\rYou have loaded in!\rWea are now a fish!\rYou have loaded in!\nWea are now a fish!\r", false,1,2);
         //I want the crosshair to be able to pick items from MUCH further away, I think I'll just make a very huge value. Somthing within a average person's render distance.
         reaching.CrossHairReach = 2000;
+        CanAmountJumps.SetupY(8f, character.JumpSys.murderJumpsBase + character.JumpSys.JumpsBase);
         //character.SwitchCharacter(Classes.LeatherBird);
     }
     private void GetHurtBoxData()
@@ -218,13 +233,13 @@ public class Walking : MonoBehaviour
         }
         if (Input.GetKeyDown(controls.interact))
         {
-            RaycastHit hit = movement.GetRayPoint(0, 0, 9);
+            RaycastHit hit = movement.GetRayPoint(0, 0, (1 << 0) | (1 << 9));
             Debug.DrawLine(transform.position, hit.point,Color.white);
             try
             {
                 if (!Player.GetIsFull() && hit.collider.TryGetComponent<Blocks>(out Blocks block))
                 {
-                    Player.AddItem(block.GetInventoryItem(true));
+                    Player.AddItem(block.GetInventoryItem(true).ToArray());
                 }
             }
             catch (NullReferenceException e)
@@ -237,10 +252,9 @@ public class Walking : MonoBehaviour
             }
             
         }
-        if (Input.GetKey(controls.interact))
+        else if (Input.GetKey(controls.interact))
         {
             reaching.AddItems(Player);
-            
         }
         if (timeGameDelay < Time.time)
         {
@@ -265,24 +279,42 @@ public class Walking : MonoBehaviour
             ShootRelease(item);
         }
         isGrounded = CheckGrounded();
+        if (isGrounded)
+        {
+            CanAmountJumps.Amount = CanAmountJumps.MaxAmount;
+        }
         GetHurtBoxData();
         KeyCheck();
         float jump = 0;
         if (jumpDelay < Time.time)
         {
+            if (jumpSys.CanJumpNotWhileGrounded() && isGrounded == false)
+            {
+                CanAmountJumps.SetCannotUseAction();
+            }
+            CanAmountJumps.SetCanUseAction(jumpSys.Jumps + jumpSys.murderJumpsBase);
             jump = Jump(isGrounded);
+            if (jump != 0)
+            {
+                jumpDelay = JUMPDELAY + Time.time;
+            }
+        }
+        else
+        {
+            CanAmountJumps.SetCannotUseAction();
         }
         if (jump != 0 && !isGrounded)
         {
             //scaleUp.AddScaleUI(Mathf.Pow(jump * Player.GetJump(),2));
             gPound.Reset();
+            CanAmountJumps.SetCanGroundPound(true);
             if (controls.GetIsAMovementKeyPressed())
             {
                 body.velocity = GetCurrentRotationFromMovement();
             }
             else
             {
-                body.velocity = new Vector3 (body.velocity.x,Mathf.Max(body.velocity.y,0),body.velocity.z);
+                body.velocity = new Vector3(body.velocity.x, Mathf.Max(body.velocity.y, 0), body.velocity.z);
             }
         }
         Crouching(isGrounded);
@@ -306,15 +338,19 @@ public class Walking : MonoBehaviour
         if (Input.GetKeyDown(controls.throwItem) && Input.GetKey(KeyCode.LeftControl)) { ThrowItem(true); }
         HotbarKeys();
         UtilizeInventory();
-        ApplyEffects();
+        Player.ApplyAllEffects();
         ChatBox();
         Health.SetHP(Player.Health.GetHPInfo()[0]);
         //HpBar.HpAdjust(10f,Player.GetHPInfo()[0],1f);
-
-    }
-    private void ApplyEffects()
-    {
-        Player.ApplyAllEffects();
+        if (isGrounded)
+        {
+            CanAmountJumps.Amount = CanAmountJumps.Amount;
+            CanAmountJumps.SetCanUseAction(1);
+        }
+        else
+        {
+            CanAmountJumps.Amount = character.JumpSys.Jumps + character.JumpSys.MurderJumps;
+        }
     }
     private void ChatBox()
     {
@@ -333,7 +369,17 @@ public class Walking : MonoBehaviour
             Cursor.lockState = CursorLockMode.None;
             chatManager.OpenBox();
             chatManager.SelectInputField();
-            
+        }
+        else if (Input.GetKeyDown(KeyCode.DownArrow) && InMenu == false && !InInventory)
+        {
+            InInventory = false;
+            invManager.CloseInventoryOpenHotbar();
+            InMenu = true;
+            Cursor.lockState = CursorLockMode.None;
+            chatManager.OpenBox();
+            chatManager.SelectInputField();
+            chatManager.ScrollMsgs(1);
+
         }
         if (Input.GetKeyDown(KeyCode.UpArrow) && InMenu == true && !InInventory)
         {
@@ -343,13 +389,14 @@ public class Walking : MonoBehaviour
         {
             chatManager.ScrollMsgs(1);
         }
-        if (Input.GetKeyDown(KeyCode.Return))
+        if (Input.GetKeyDown(KeyCode.Return) && InMenu == true && !InInventory)
         {
             //SlashRegex.GetSlashSearchType(text: chatManager.GetInputText(), matches: out MatchCollection commands);
-            chatManager.GetInputText().TrimEnd();
-            SaveData.AppendTextHistory(chatManager.GetInputText(),false);
-            SlashRegex.GetChatBoxRegex(text: chatManager.GetInputText(), inventorySize: Player.GetInventorySize(), out List<Effect> attributes, out List<AddItemRequest> items, out List<string> msgs, out bool clear, out float jump, out bool getAllItems, out bool max, out RegexOrderItems orderBy, out string charact,out string error);
+            //chatManager.GetInputText().TrimEnd();
+            SaveData.AppendTextHistory(chatManager.GetInputText().TrimEnd(),false);
+            SlashRegex.GetChatBoxRegex(text: chatManager.GetInputText(), inventorySize: Player.GetInventorySize(), out List<AttributesTemplete> attributes, out List<AddItemRequest> items, out List<string> msgs, out bool clear, out float jump, out bool getAllItems, out bool max, out RegexOrderItems orderBy, out string charact,out string error);
             string text = string.Concat(msgs.ToArray());
+            Debug.LogWarning(error);
             msgs.Clear();
             Debug.Log(text);
             if (jump != 0)
@@ -365,16 +412,29 @@ public class Walking : MonoBehaviour
                 character = new Character(AllLibary.ItemLibary.SearchLibaryForCharacter(charact),Player) ?? character;
                 body.mass = Player.Weight;
                 scaleDown.SetupScale(Mathf.Max(Mathf.Abs(Gravity * 2f), Player.GroundPoundBase.Max * 4.5f, 98));
-                scaleUp.SetupScale(Player.JumpBase.Max * 80f);
+                scaleUp.SetupScale(Player.JumpBase.Max * 70f * (character.JumpSys.JumpsBase + character.JumpSys.MurderJumps));
+                CanAmountJumps.SetupY(8f, character.JumpSys.murderJumpsBase + character.JumpSys.JumpsBase);
             }
             if (getAllItems)
             {
-                Player.AddItem(AllLibary.ItemLibary.GetAllItems().ToArray());
+                Player.AddItem(AllLibary.ItemLibary.GetAllItems().Where(x => !x.GetName().Contains("Weight")).ToArray());
             }
-            //Player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(attributes.ToArray()));
+            Player.ApplyAttribute(attributes);
             for (int i = 0; i < items.Count; i++)
             {
-                Player.AddItem(items[i].GetItem());
+                try
+                {
+                    Player.AddItem(items[i].GetItem());
+                }
+                catch (NullReferenceException)
+                {
+                    error += "Item not found in item libary";
+                }
+                catch (Exception e) 
+                {
+                    Debug.LogException(e);
+                }
+                
             }
             chatManager.ClearAndCloseTextBox();
             Cursor.lockState = CursorLockMode.Locked;
@@ -391,6 +451,8 @@ public class Walking : MonoBehaviour
             {
                 generic.AddText(error, false, 8, 5);
             }
+            invManager.CloseInventoryOpenHotbar();
+            Player.ReIndexItems();
         }
         if (Input.GetKeyDown(KeyCode.Period) && !InInventory && InMenu == false)
         {
@@ -431,8 +493,6 @@ public class Walking : MonoBehaviour
         thrownObject.name = $"Thrown_{item.GetName()}";
         thrownObject.transform.SetPositionAndRotation(transform.position + (playerBody.radius * 3) * transform.rotation.eulerAngles.normalized, transform.rotation);
         thrownObject.layer = 9;
-        
-        BoxCollider box = thrownObject.AddComponent<BoxCollider>();
         Rigidbody tempbd = thrownObject.AddComponent<Rigidbody>();
         Blocks blocks = thrownObject.AddComponent<Blocks>();
         thrownObject.AddComponent<HurtBox>();
@@ -441,14 +501,16 @@ public class Walking : MonoBehaviour
         tempbd.collisionDetectionMode = CollisionDetectionMode.Continuous;
         try
         {
+            Debug.Log("Trying to add material");
             thrownObject.GetComponent<MeshRenderer>().material = (Player.GetInventoryItemCurrentHotbar().Material);
         }
-        catch 
+        catch (Exception e)
         {
-            
+            Debug.LogException(e);
         }
         blocks.SetupBox(item, item.Weight);
         tempbd.AddForce(1 * transform.rotation.eulerAngles.normalized + body.velocity);
+        BoxCollider collider = thrownObject.AddComponent<BoxCollider>();
     }
     private void HotbarKeys()
     {
@@ -506,6 +568,20 @@ public class Walking : MonoBehaviour
             }
         }
     }
+    private void SwapItems(int item1, int item2)
+    {
+        int[] swap = new int[2];
+        swap[0] = item1;
+        swap[1] = item2;
+        Player.GetInventoryItem(item1).GetIsDuplication(true, Player.GetInventoryItem(item2));
+        // Perform the actual swap
+        Player.SwapItem(swap[0], swap[1]);
+        //Update textures
+        invManager.RemoveSelectItem(swap[0]);
+        invManager.RemoveSelectItem(swap[1]);
+        invManager.RefreshFullInventory(Player);
+        invManager.SetSelectedItem(Player.GetHotbarSlot());
+    }
     private void UtilizeInventory()
     {
         if (Input.GetKeyDown(controls.Inventory) && InMenu == false)
@@ -551,18 +627,7 @@ public class Walking : MonoBehaviour
         }
         else
         {
-            int[] swap = new int[2];
-            swap[0] = (int)pend[0];
-            swap[1] = (int)pend[1];
-            Debug.Log($"Swapped {pend[0]} & {pend[1]}");
-            Player.GetInventoryItem((int)pend[0]).GetIsDuplication(true, Player.GetInventoryItem((int)pend[1]));
-            // Perform the actual swap
-            Player.SwapItem(swap[0], swap[1]);
-            //Update textures
-            invManager.RemoveSelectItem(swap[0]);
-            invManager.RemoveSelectItem(swap[1]);
-            invManager.RefreshFullInventory(Player);
-            invManager.SetSelectedItem(Player.GetHotbarSlot());
+            SwapItems((int)pend[0], (int)pend[1]);
         }
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll > 0f)
@@ -574,6 +639,97 @@ public class Walking : MonoBehaviour
         {
             Player.ScrollItem(1);
             invManager.SetSelectedItem(Player.GetHotbarSlot(), Player.GetInventoryItemCurrentHotbar().GetName());
+        }
+        if (Input.GetKey(KeyCode.LeftShift) && Input.GetMouseButtonDown(0) && InInventory && !InMenu)
+        {
+            if (invManager.GetPending()[0] != null)
+            {
+                int hotbarSize = Player.GetHotbarSize();
+                InventoryItem item = Player.GetInventoryItem((int)invManager.GetPending()[0]);
+                if (item.GetIsEmptyItem())
+                {
+
+                }
+                else if (item.GetItemType() == ItemType.Ammo)
+                {
+                    if ((int)invManager.GetPending()[0] < hotbarSize)
+                    {
+                        Debug.Log($"Searching for item from slot: {invManager.GetPending()[0]}");
+                        if (Player.GetInventory().Where(x => x.GetItemType() == ItemType.Weapon).Where(x => x.SlotID > Player.GetHotbarSize()).Any(x => x.GetItem<Weapon>().IsAcceptableAmmoByName(item.GetName())))
+                        {
+                            InventoryItem shiftItem = Player.GetInventory().Where(x => x.GetItemType() == ItemType.Weapon).Where(x => x.SlotID > Player.GetHotbarSize()).First(x => x.GetItem<Weapon>().IsAcceptableAmmoByName(item.GetName()));
+                            Debug.Log($"Found one at: {shiftItem.SlotID}");
+                            SwapItems((int)pend[0], shiftItem.SlotID);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                InventoryItem shiftItem = Player.GetInventory().Where(x => x.SlotID > Player.GetHotbarSize()).FirstOrDefault(x => x.GetItemType() == ItemType.Empty);
+                                if (shiftItem != null)
+                                {
+                                    Debug.Log($"Found one at: {shiftItem.SlotID}");
+                                    SwapItems((int)pend[0], shiftItem.SlotID);
+                                }
+                            }
+                            catch
+                            {
+                            }
+                        }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            InventoryItem shiftItem = Player.GetInventory().Where(x => x.SlotID < Player.GetHotbarSize()).FirstOrDefault(x => x.GetItemType() == ItemType.Empty);
+                            if (shiftItem != null)
+                            {
+                                Debug.Log($"Found one at: {shiftItem.SlotID}");
+                                SwapItems((int)pend[0], shiftItem.SlotID);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogWarning(e.Message + e.StackTrace);
+                        }
+                    }
+                }
+                else
+                {
+                    if ((int)invManager.GetPending()[0] < hotbarSize)
+                    {
+                        try
+                        {
+                            InventoryItem shiftItem = Player.GetInventory().Where(x => x.SlotID > Player.GetHotbarSize()).FirstOrDefault(x => x.GetItemType() == ItemType.Empty);
+                            if (shiftItem != null)
+                            {
+                                Debug.Log($"Found one at: {shiftItem.SlotID}");
+                                SwapItems((int)pend[0], shiftItem.SlotID);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogWarning(e.Message + e.StackTrace);
+                        }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            InventoryItem shiftItem = Player.GetInventory().Where(x => x.SlotID < Player.GetHotbarSize()).FirstOrDefault(x => x.GetItemType() == ItemType.Empty);
+                            if (shiftItem != null)
+                            {
+                                Debug.Log($"Found one at: {shiftItem.SlotID}");
+                                SwapItems((int)pend[0], shiftItem.SlotID);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogWarning(e.Message + e.StackTrace);
+                        }
+                    }
+                }
+            }
         }
     }
     private void ShootPress(InventoryItem item)
@@ -589,7 +745,7 @@ public class Walking : MonoBehaviour
         if (item.GetItemType() == ItemType.Weapon)
         {
             Weapon rockTMP = item.GetItem<Weapon>();
-            float speed = Mathf.Abs(body.velocity.x) + Mathf.Abs(body.velocity.y) + Mathf.Abs(body.velocity.z);
+            float speed = Mathf.Abs(body.velocity.x) + Mathf.Abs(body.velocity.z);
             //Debug.Log($"canFire: {rockTMP.GetCanFire(false)} and is standered {rockTMP.WeaponDesign == WeaponDesign.Standered}");
             if (rockTMP.WeaponDesign == WeaponDesign.Standered && rockTMP.GetCanFire(true))
             {
@@ -660,6 +816,7 @@ public class Walking : MonoBehaviour
                         tempBullet.GetComponent<Rigidbody>().AddForce(speed * direction);
                         tempBullet.GetComponent<Rigidbody>().AddForce(projectile.GetSpeed() * direction);
                         tempBullet.GetComponent<Rigidbody>().AddForce(projectile.GetYeet() * new Vector3(0, 1, 0));
+                        tempBullet.GetComponent<Rigidbody>().AddForce(body.velocity.y * new Vector3(0, 1, 0));
                     }
                    
                 }
@@ -783,10 +940,12 @@ public class Walking : MonoBehaviour
         {
             body.velocity = new Vector3(body.velocity.x,-Mathf.Abs(body.velocity.y), body.velocity.z);
             body.AddForce(new Vector3(0,-Mathf.Abs(Player.GroundPound),0),ForceMode.VelocityChange);
+            CanAmountJumps.SetCanGroundPound(false);
         }
         if (isGrounded)
         {
             gPound.Reset();
+            CanAmountJumps.SetCanGroundPound(true);
         }
     }
     /// <summary>
@@ -800,12 +959,10 @@ public class Walking : MonoBehaviour
         {
             float value = jumpSys.Jump(isGrounded, MoveStates.OnPress);
             scaleUp.AddScaleUI(value * Player.Jump * jump * Mathf.Abs(Gravity));
-            jumpDelay = JUMPDELAY + Time.time;
             return value;
         }
         if (Input.GetKeyUp(controls.jump) || InMenu)
         {
-            jumpDelay = JUMPDELAY + Time.time;
             return jumpSys.Jump(isGrounded, MoveStates.OnRelease);
         }
         return 0;
@@ -883,6 +1040,13 @@ public class Walking : MonoBehaviour
         scaleUp.ApplyScale(Gravity);
         //Debug.Log($"Body.Velocity {body.velocity}");
         Player.ApplyStatAdjustments();
+        if (!ScentTools.CharactersOwnSmell(character,transform.position) && nose.ShouldCreateNewScent(character) && Time.time > smellDelay)
+        {
+            summonStench.SummonBubble(character, transform.position);
+            smellDelay = Time.time + SMELLDELAY;
+            summonStench.ToString();
+        }
+
     }
     
     private bool TookDamage = false;
@@ -924,5 +1088,44 @@ public class Walking : MonoBehaviour
         {
             
         }
+    }
+
+    public string GetName()
+    {
+        return ((IName)character).GetName();
+    }
+
+    public bool GetName(string name)
+    {
+        return ((IName)character).GetName(name);
+    }
+
+    public string GetCharName()
+    {
+        return character.CharacterName;
+    }
+
+    public bool GetCharName(string name)
+    {
+        return (character.CharacterName == name);
+    }
+    public bool IsPlayablePlayer()
+    {
+        return true;
+    }
+
+    public string GetDesc()
+    {
+        return ((INameDesc)character).GetDesc();
+    }
+
+    public bool GetDesc(string name)
+    {
+        return ((INameDesc)character).GetDesc(name);
+    }
+
+    public GameObject GetGameObject()
+    {
+        return gameObject;
     }
 }

@@ -50,7 +50,7 @@ public class MsgBox : MonoBehaviour
     /// <summary>
     /// Collect text between {}
     /// </summary>
-    private readonly Regex bracketRegex = new Regex(@"\{([^{}]*)\}");
+    private readonly Regex bracketRegex = new(@"\{([^{}]*)\}");
     private float MaxHealth;
     private float Health;
     private float Warn;
@@ -221,7 +221,7 @@ public class MsgBox : MonoBehaviour
     /// <param name="item"></param>
     public void SetAmmo(InventoryItem item)
     {
-        if (item != null && item.GetItemType() == Enums.ItemType.Weapon)
+        if (item != null && item.GetItemType() != Enums.ItemType.Weapon)
         {
             try
             {
@@ -234,14 +234,14 @@ public class MsgBox : MonoBehaviour
                 {
                     TextMsg = $"{rockTMP.GetAmmoCount()}/{rockTMP.GetMaxAmmo()}";
                 }
-                else
+                else if (rockTMP.GetCanFire(false))
                 {
                     TextMsg = $"Throwable: {rockTMP.GetCanFire(false)}";
                 }
             }
             catch 
             {
-                TextMsg = "";
+                ////TextMsg = "";
             }
             
         }

@@ -4,7 +4,7 @@ using UnityEngine.EventSystems;
 using System;
 using static BaseCharacter.Items.BoxColors;
 using static Enums;
-public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler, IPointerExitHandler
 {
     /// <summary>
     /// Where the hotbar slot is on the UI.
@@ -38,6 +38,7 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
     [SerializeField] private RawImage backgroundItem;
     [SerializeField] private ExtraMenu extraMenus;
     [SerializeField] private MsgBox count;
+    [SerializeField] private bool MouseInteractable = true;
     private bool HasExtraMenu;
     /*
     [SerializeField] private Color Idle;
@@ -50,47 +51,47 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
 
     private bool shouldSwap = false;
 
-
+    public void SetBackgroundColor(Color color)
+    {
+        backgroundItem.color = color;
+    }
     private void Start()
     {
         slotbar = GetComponent<RawImage>();
         SetNotSelected();
     }
-
-    // Implement the IPointerDownHandler interface
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (IsClickable)
+        if (IsClickable && MouseInteractable)
         {
             IsClicked = !IsClicked;
-            UpdateSelectionVisual();
+            if (IsClicked)
+            {
+                UpdateSelectionVisual();
+                SetSelected();
+            }
+            else
+            {
+                SetNotSelected();
+                LightenBackground();
+            }
         }
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (IsClickable && Input.GetMouseButton(0))
+        if (IsClickable && MouseInteractable && !IsClicked)
         {
-            IsClicked = true;
-            shouldSwap = true;
-            UpdateSelectionVisual();
-        }
-        else if (IsClickable)
-        {
-            DarkenBackground();
+            LightenBackground();
         }
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (IsClickable)
+        if (IsClickable && MouseInteractable && !PendingItem && !IsClicked)
         {
-            UpdateSelectionVisual();
+            SetNotSelected();
         }
-    }
-    public void OnPointerClick(PointerEventData eventData)
-    {
-        
     }
 
     public void UpdateOnLoad()
@@ -117,10 +118,13 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
     }
     public void UpdateSelectionVisual()
     {
-        if (IsClicked)
+        if (IsClickable && MouseInteractable)
         {
             slotbar.color = idleSelected;
-            backgroundItem.color = new Color(1, 1, 1, 0.8f);
+            if (!ReferenceEquals(backgroundItem, Texture2D.whiteTexture))
+            {
+                backgroundItem.color = new Color(0, 0, 0, 0.8f);
+            }
         }
         else
         {
@@ -129,7 +133,11 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
     }
     public void DarkenBackground()
     {
-        slotbar.color *= new Color(0.5f, 0.5f, 0.5f);
+        slotbar.color *= new Color(0.3f, 0.3f, 0.1f);
+    }
+    public void LightenBackground()
+    {
+        slotbar.color *= new Color(1.5f, 1.5f, 3f);
     }
 
     /// <summary>
@@ -193,7 +201,7 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
                 slotbar.color = Color.clear;
                 PendingItem = false;
                 IsOpen = false;
-                count.SetText("", true);
+                if (count != null) { count.SetText("", true); }
             }
         }
         catch
@@ -209,7 +217,7 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
             slotbar.color = Color.clear;
             PendingItem = false;
             IsOpen = false;
-            count.SetText("", true);
+            if (count != null) count.SetText("", true);
         }
         catch
         {
@@ -344,33 +352,36 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
     /// </summary>
     public void SetNotSelected()
     {
-        try
+        if (MouseInteractable)
         {
-            extraMenus.SetNotSelected();
-        }
-        catch
-        {
-            Debug.Log("ExtraMenus is either null or has not loaded in yet.");
-        }
-        try
-        {
-            
-            if (PendingItem)
+            try
             {
-                slotbar.color = idleSelected;
+                extraMenus.SetNotSelected();
             }
-            else if (IsHotbar)
+            catch
             {
-                slotbar.color = idle;
+                Debug.Log("ExtraMenus is either null or has not loaded in yet.");
             }
-            else if (IsOpen)
+            try
             {
-                slotbar.color = idle;
+
+                if (PendingItem)
+                {
+                    slotbar.color = idleSelected;
+                }
+                else if (IsHotbar)
+                {
+                    slotbar.color = idle;
+                }
+                else if (IsOpen)
+                {
+                    slotbar.color = idle;
+                }
             }
-        }
-        catch
-        {
-            Debug.Log("Slotbar has not loaded in yet.");
+            catch
+            {
+                Debug.Log("Slotbar has not loaded in yet.");
+            }
         }
     }
 
@@ -379,30 +390,33 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
     /// </summary>
     public void SetSelected()
     {
-        try
+        if (MouseInteractable)
         {
-            extraMenus.SetSelected(IsHotbar);
-        }
-        catch
-        {
-            Debug.LogWarning("ExtraMenu has not loaded in yet");
-        }
-        
-        try
-        {
-           
-            if (PendingItem)
+            try
             {
-                slotbar.color = hoverSelected;
+                extraMenus.SetSelected(IsHotbar);
             }
-            else
+            catch
             {
-                slotbar.color = hover;
+                Debug.LogWarning("ExtraMenu has not loaded in yet");
             }
-        }
-        catch
-        {
-            Debug.LogWarning("Slotbar has not loaded in yet.");
+
+            try
+            {
+
+                if (PendingItem)
+                {
+                    slotbar.color = hoverSelected;
+                }
+                else
+                {
+                    slotbar.color = hover;
+                }
+            }
+            catch
+            {
+                Debug.LogWarning("Slotbar has not loaded in yet.");
+            }
         }
     }
     /// <summary>
@@ -415,7 +429,7 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
     }
     public void SetupExtraMenu(params ExtraDataType[] extraMenuDataType)
     {
-        extraMenus.SetupExtraMenu(extraMenuDataType);
+        if (extraMenus != null) extraMenus.SetupExtraMenu(extraMenuDataType);
     }
     public int[] GetExtraMenuSliders()
     {
@@ -423,11 +437,13 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
     }
     public int GetExtraMenuRoleSlider()
     {
-        return extraMenus.GetSliderRoleValue();
+        if (extraMenus != null) return extraMenus.GetSliderRoleValue();
+        return 0;
     }
     public bool[] GetExtraMenuButtons()
     {
-        return extraMenus.presses;
+        if (extraMenus != null) return extraMenus.presses;
+        return null;
     }
     /// <summary>
     /// Set your inventory, hotbar, etc... to be Clickable
@@ -472,10 +488,10 @@ public class UiDisplay : MonoBehaviour, IPointerDownHandler, IPointerEnterHandle
     }
     public void SetCount(string amount)
     {
-        count.SetText($"{amount}", true);
+        if (count != null) count.SetText($"{amount}", true);
     }
     public void ClearCount()
     {
-        count.ClearMsg();
+        if (count != null) count.ClearMsg();
     }
 }

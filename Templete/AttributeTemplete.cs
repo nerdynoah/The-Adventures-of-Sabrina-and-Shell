@@ -1,5 +1,4 @@
 using BaseCharacter.Effects;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using static Enums;
@@ -40,24 +39,27 @@ public class AttributesTemplete
         Option = option;
         OtherEffects = otherEffects;
     }
+    public AttributesTemplete(AttributesTemplete other)
+    {
+        Name=other.Name;
+        Attributes = other.Attributes;
+        Strength = other.Strength;
+        Time = other.Time;
+        Option = other.Option;
+        OtherEffects = other.OtherEffects;
+        Texture = other.Texture;
+    }
 
     public string GetName() { return Name; }
     public Attributes GetAttributes() { return Attributes; }
     public float GetStrength(float adj = 0) { return Strength + adj; }
     public float GetTime(float adj = 0) { return Time + adj; }
     public float GetOption(float adj = 0) { return Option + adj; }
-    public Texture GetTexutre()
+    public Texture GetTexture()
     {
         if (Texture != null)
         { return Texture; }
         return null;
-    }
-    public void SetupAttributeTempleteInCode(Attributes attributes, float strength, float time, float option)
-    {
-        Attributes = attributes;
-        Strength = strength;
-        Time = time;
-        Option = option;
     }
     public Effect GetAttriStruct()
     {
@@ -65,4 +67,7 @@ public class AttributesTemplete
         { return new Effect(Name, Attributes, Strength, Time, Option); }
         return new Effect(Name,Attributes,Strength,Time,Option, OtherEffects);
     }
+    public void SetStrength(float value) { Strength = value; }
+    public void SetTime(float value) { Time = value; }
+    public void SetOption(float value) { Option = value; }
 }

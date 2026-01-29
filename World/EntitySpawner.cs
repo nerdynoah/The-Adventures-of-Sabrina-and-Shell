@@ -24,7 +24,7 @@ public class EntitySpawner : MonoBehaviour
     [SerializeField] private float ChanceOfSpawn;
     [Space(15)]
     [SerializeField] private bool ApplyAttributesRandomly = false;
-    [SerializeField] private PathMode[] OverRidePathMode;
+    [SerializeField] private AttackMode[] OverRidePathMode;
 
     private List<EntityTemplete> enemyTMP = new();
     private List<AttributesTemplete> attributesTempletes = new();

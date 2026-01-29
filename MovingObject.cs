@@ -1,8 +1,6 @@
 using BaseCharacter.Items;
 using BaseCharacter.Movement;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using static Enums;
 
@@ -12,7 +10,10 @@ public class MovingProjectile : MonoBehaviour
     [SerializeField] SphereCollider sphereCollider;
     private WorldRun run;
     private float gravity;
-    private string Name;
+    /// <summary>
+    /// The name of the person who shot this thing.
+    /// </summary>
+    private string ShooterName;
     private HashSet<GameObject> gameObjects = new HashSet<GameObject>();
     private float LiveTime { get; set; }
     /// <summary>
@@ -85,7 +86,7 @@ public class MovingProjectile : MonoBehaviour
         KnockBack = projectile.KnockBack;
         transform.localScale = new Vector3(Size,Size,Size);
         this.wpnClass = wpnClass;
-        Name = name;
+        ShooterName = name;
         body.mass = Weight / 100;
     }
     public void SetupMeleeProjectile(Projectile projectile, WeaponClass wpnClass, float playerWeight, string name)
@@ -105,7 +106,7 @@ public class MovingProjectile : MonoBehaviour
         KnockBack = projectile.KnockBack;
         transform.localScale = new Vector3(Size, Size, Size);
         this.wpnClass = wpnClass;
-        Name = name;
+        ShooterName = name;
         body.mass = Weight / 100;
     }
     public void SetImmune(GameObject immune)
@@ -277,9 +278,9 @@ public class MovingProjectile : MonoBehaviour
                 float travelRatio = Mathf.Clamp01((totalTravel - MinDist) / (MaxDist - MinDist));
                 float damageMultiplier = Mathf.Lerp(1f, MinPercentFalloff, travelRatio);
                 float finalDamage = Damage * damageMultiplier;
-                gameObjects.Add(box.ApplyDamage(GetHashCode(), Name, 100, finalDamage, wpnClass));
-                box.ApplyKnockback(GetHashCode(), Name, 10, GetKnockback(true));
-                box.ApplyAttributes(GetHashCode(), Name, 20, CommandRequest.Attributes, Attributes.ToArray());
+                gameObjects.Add(box.ApplyDamage(GetHashCode(), ShooterName, 100, finalDamage, wpnClass));
+                box.ApplyKnockback(GetHashCode(), ShooterName, 10, GetKnockback(true));
+                box.ApplyAttributes(GetHashCode(), ShooterName, 20, CommandRequest.Attributes, Attributes.ToArray());
                 Piercing -= 100;
             }
             else
@@ -308,9 +309,9 @@ public class MovingProjectile : MonoBehaviour
                 float explosiveDamageMultiplier = Mathf.Lerp(1f, ExplosiveDamageMin, (distanceFromExplosion / ExplosiveSize));
                 finalDamage *= explosiveDamageMultiplier;
 
-                gameObjects.Add(box.ApplyDamage(GetHashCode(), Name, 100, finalDamage, wpnClass));
-                box.ApplyKnockback(GetHashCode(), Name, 10, GetKnockback(false));
-                box.ApplyAttributes(GetHashCode(), Name, 20, CommandRequest.Attributes, Attributes.ToArray());
+                gameObjects.Add(box.ApplyDamage(GetHashCode(), ShooterName, 100, finalDamage, wpnClass));
+                box.ApplyKnockback(GetHashCode(), ShooterName, 10, GetKnockback(false));
+                box.ApplyAttributes(GetHashCode(), ShooterName, 20, CommandRequest.Attributes, Attributes.ToArray());
                 Piercing -= 100;
             }
             else
@@ -331,9 +332,9 @@ public class MovingProjectile : MonoBehaviour
                 float travelRatio = Mathf.Clamp01((totalTravel - MinDist) / (MaxDist - MinDist));
                 float damageMultiplier = Mathf.Lerp(1f, MinPercentFalloff, travelRatio);
                 float finalDamage = Damage * damageMultiplier;
-                gameObjects.Add(box.ApplyDamage(GetHashCode(), Name, 100, finalDamage, wpnClass));
-                box.ApplyKnockback(GetHashCode(), Name, 10, GetKnockback(true));
-                box.ApplyAttributes(GetHashCode(), Name, 20, CommandRequest.Attributes, Attributes.ToArray());
+                gameObjects.Add(box.ApplyDamage(GetHashCode(), ShooterName, 100, finalDamage, wpnClass));
+                box.ApplyKnockback(GetHashCode(), ShooterName, 10, GetKnockback(true));
+                box.ApplyAttributes(GetHashCode(), ShooterName, 20, CommandRequest.Attributes, Attributes.ToArray());
             }
         }
     }
@@ -380,9 +381,9 @@ public class MovingProjectile : MonoBehaviour
                 Vector3 explosionDirection = (other.transform.position - transform.position).normalized;
                 ForceKnockback knockback = new ForceKnockback(explosionDirection * KnockBack.magnitude, transform.position,Weight * 100);
 
-                gameObjects.Add(box.ApplyDamage(GetHashCode(), Name, 100, explosionDamage, wpnClass));
-                box.ApplyAttributes(GetHashCode(), Name, 20, CommandRequest.Attributes, Attributes.ToArray());
-                box.ApplyKnockback(GetHashCode(), Name, 10, knockback);
+                gameObjects.Add(box.ApplyDamage(GetHashCode(), ShooterName, 100, explosionDamage, wpnClass));
+                box.ApplyAttributes(GetHashCode(), ShooterName, 20, CommandRequest.Attributes, Attributes.ToArray());
+                box.ApplyKnockback(GetHashCode(), ShooterName, 10, knockback);
             }
         }
     }

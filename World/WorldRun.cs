@@ -18,6 +18,7 @@ public class WorldRun : MonoBehaviour
         }
         set
         {
+            gravityAdj = value;
             Physics.gravity = new Vector3(0,gravityAdj * GRAVITY,0);
         }
     }
@@ -27,6 +28,7 @@ public class WorldRun : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            Gravity = gravityAdj;
         }
         else if (Instance != this)
         {

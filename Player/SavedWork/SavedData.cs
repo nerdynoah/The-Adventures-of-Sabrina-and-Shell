@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using static Enums;
+using BaseCharacter.Items;
 public static class SaveData
 {
     private static string SavePath => Path.Combine(Application.persistentDataPath, "player_save.json");
@@ -68,23 +69,36 @@ public static class SaveData
     {
         List<string> inventory = new();
         List<int> amount = new();
+        List<string> secondaryInfo = new();
+        List<int> secondaryInfoIndex = new();
         //List<Effect> effects = new List<Effect>();
         for (int i = 0; i < character.Player.GetInventorySize(); i++)
         {
             inventory.Add(character.Player.GetInventoryItem(i).GetName());
-            amount.Add(character.Player.GetInventoryItem(i).Amount);
+            amount.Add(character.Player.GetInventoryItem(i).SaveDataAmount);
+            if (character.Player.GetProjectileNames(i) != null)
+            {
+                for (int j = 0; j < (character.Player.GetProjectileNames(i).Count); j++)
+                {
+                    secondaryInfo.Add(character.Player.GetProjectileNames(i)[j]);
+                    secondaryInfoIndex.Add(i+1);
+                }
+            }
+            
         }
         var saveData = new CharacterData
         {
-            Name = character.Player.Name,
+            Name = character.GetName(),
             Desc = character.GetDesc(),
             Money = character.Player.GetMoneyInt(),
             gameLevel = character.Player.GameLevel,
-            CharacterName = character.GetName(),
+            CharacterName = character.CharacterName,
             items = inventory.ToArray(),
             amounts = amount.ToArray(),
             WorldName = location.Name,
             Location = location.Location,
+            SeconaryInfoText = secondaryInfo.ToArray(),
+            SecondaryInfoIndex = secondaryInfoIndex.ToArray(),
         };
 
         string json = JsonUtility.ToJson(obj: saveData, prettyPrint: true);
@@ -330,6 +344,11 @@ public static class SaveData
             Debug.LogError("Failed to append text: " + e.Message);
         }
     }
+    public static void DeleteTextHistory()
+    {
+        File.Delete(SaveHistory);
+        File.Create(SaveHistory);
+    }
     public static bool TryLoadText(out string content)
     {
         try
@@ -379,7 +398,61 @@ public static class SaveData
         lines = null;
         return false;
     }
+    /// <summary>
+    /// Returns inventoryitems, along with any projectiles they might of had.
+    /// </summary>
+    /// <returns>A List of <see cref="InventoryItem"/></returns>
+    public static List<InventoryItem> GetInventoryItems()
+    {
+        if (File.Exists(SaveCharacterPath))
+        {
+            try
+            {
+                string json = File.ReadAllText(RegexPath);
+                string playerJson = File.ReadAllText(SaveCharacterPath);
+                CharacterData loadedData = JsonUtility.FromJson<CharacterData>(playerJson);
+                List<InventoryItem> item = new List<InventoryItem>();
+                int secondarySearchIndex = 0;
+                for (int i = 0; i < loadedData.items.Length; i++)
+                {
+                    if (loadedData.items[i] != ""|| loadedData.items[i] != null || loadedData.items[i] != string.Empty)
+                    {
+                        continue;
+                    }
+                    AddItemRequest items = new AddItemRequest(loadedData.items[i], loadedData.amounts[i]);
+                    InventoryItem it = items.GetItem();
+                    int amountRelatedToIndex = loadedData.SecondaryInfoIndex.Where(x => x == i-1).Count();
+                    for (int j = secondarySearchIndex; j < secondarySearchIndex + amountRelatedToIndex && j < loadedData.SeconaryInfoText.Length; j++)
+                    {
+                        try
+                        {
+                            it.GetItem().SetupProjectile(AllLibary.ItemLibary.SearchLibaryForInventoryItem(loadedData.SeconaryInfoText[j]).GetItem().GetProjectile().ToArray());
+                            if (it.GetItemType() == ItemType.Weapon)
+                            {
+                                it.GetItem<Weapon>().AddAmmo(loadedData.amounts[i]);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogAssertion($"Unable to add projectile: {ex.StackTrace}");
+                        }
+                        
+                    }
+                    secondarySearchIndex += amountRelatedToIndex;
+                    item.Add(it);
+                    
+                }
+                return item;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogAssertion($"Error Items file: {ex.Message} {ex.StackTrace}");
+            }
+        }
+        return null;
+    }
     private static readonly Regex removeDate = new Regex(@"[-[^A|P]M (?<text>.*)");
+    
 }
 
 [Serializable]
@@ -388,7 +461,7 @@ public class PlayerSaveData
     #region Player Data
     public uint ID;
     /// <summary>
-    /// Name of the Player
+    /// ShooterName of the Player
     /// </summary>
     public string Name ;
     public string Desc ;

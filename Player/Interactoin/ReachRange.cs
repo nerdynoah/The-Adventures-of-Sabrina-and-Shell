@@ -100,8 +100,8 @@ public class ReachRange : MonoBehaviour
             {
                 if (item[i] != null)
                 {
-                    InventoryItem inventoryItem = item[i].GetInventoryItem(true);
-                    if (inventoryItem != null && inventorySystem.AddItem(inventoryItem))
+                    List<InventoryItem> inventoryItem = item[i].GetInventoryItem(true);
+                    if (inventoryItem != null && inventorySystem.AddItem(inventoryItem.ToArray()))
                     {
                         itemsAdded++;
                     }
@@ -117,10 +117,10 @@ public class ReachRange : MonoBehaviour
             {
                 if (item[i] != null)
                 {
-                    InventoryItem inventoryItem = item[i].GetInventoryItem(true);
+                    List<InventoryItem> inventoryItem = item[i].GetInventoryItem(true);
                     if (inventoryItem != null)
                     {
-                        if (inventorySystem.AddItem(inventoryItem))
+                        if (inventorySystem.AddItem(inventoryItem.ToArray()))
                         {
                             item.RemoveAt(i);
                             itemsAdded++;

@@ -119,7 +119,7 @@ public class InvManager : MonoBehaviour
     /// Sets the current item and itembox to be seleted and highlighted. May display text and/or do other stuff.
     /// </summary>
     /// <param name="id">Where</param>
-    /// <param name="name">Name of item</param>
+    /// <param name="name">ShooterName of item</param>
     public void SetSelectedItem(int id, string name)
     {
         try
@@ -393,7 +393,7 @@ public class InvManager : MonoBehaviour
     /// <summary>
     /// Setup buttons to display.
     /// </summary>
-    /// <param name="nameid">Name and there ID</param>
+    /// <param name="nameid">ShooterName and there ID</param>
     public void SetupMultiplayerMenuButtons(List<NameId> nameid)
     {
         if (nameid.Count < 1)
@@ -540,7 +540,10 @@ public class InvManager : MonoBehaviour
     }
     public void SetTexture(int id, Texture texture, string amount)
     {
-        activeSlots[id].SetTexture(texture);
+        if (!activeSlots[id].GetClicked())
+        {
+            activeSlots[id].SetTexture(texture);
+        }
         activeSlots[id].SetCount(amount);
     }
     public void SetCount(int id, string amount)
@@ -609,7 +612,7 @@ public class InvManager : MonoBehaviour
             }
             if (item != null && !item.GetIsEmptyItem())
             {
-                Debug.Log($"Held amount: {item.GetHeldAmountString()}");
+                //Debug.Log($"Held amount: {item.GetHeldAmountString()}");
                 SetTexture(i, item.GetTheTexture(),item.GetHeldAmountString());
             }
             else

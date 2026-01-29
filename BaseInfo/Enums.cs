@@ -178,6 +178,10 @@ public class Enums
         /// Fall damage, Earthquakes, etc... Mainly things not summoned by players.
         /// </summary>
         World = 4,
+        /// <summary>
+        /// <see cref="BaseCharacter.Effects.FireDamage"/> which is applied via <see cref="BaseCharacter.Entity.Player.ApplyFireDamage()"/>.<br></br><b>Do not</b> apply directly any weapon.
+        /// </summary>
+        FireDamage = 5, //Simply here as a way to include more resistances, weapons should use bullet, explosive, magic, or world to determine what they do.
     }
     public enum ProjectileType
     {
@@ -580,7 +584,7 @@ public class Enums
     }
     #endregion
     #region Enemy Data
-    public enum PathMode
+    public enum AttackMode
     {
         /// <summary>
         /// Utilize custom data built into the gameobject.
@@ -602,10 +606,6 @@ public class Enums
         /// Uses its sensors to hunt you out.
         /// </summary>
         Hunter,
-        /// <summary>
-        /// Uses its sensers to attack ANYTHING it passes.
-        /// </summary>
-        Agreesive,
         /// <summary>
         /// Stays in one area, will only attack when a trigger is pushed.
         /// </summary>
@@ -638,6 +638,39 @@ public class Enums
         /// </summary>
         LessAreaRandommMovement,
     }
+    public enum AttackWho
+    {
+        /// <summary>
+        /// Use custom data built into entity
+        /// </summary>
+        None = 0,
+        /// <summary>
+        /// Only can attack players who attack them, even if they hunt you out.
+        /// </summary>
+        Attackers = 1,
+        /// <summary>
+        /// Attacks players (<see cref="Walking"/>)
+        /// </summary>
+        Players = 2,
+        /// <summary>
+        /// Declare a list of enemies and only attack them.
+        /// </summary>
+        PredeterminedEnemies = 3,
+        /// <summary>
+        /// Attack anything thats not its ally.
+        /// </summary>
+        NonAllys = 4,
+
+        //Genocidic, overrides everythign above.
+        /// <summary>
+        /// Attack anything that is not its own <see cref="BaseCharacter.Character"/> species
+        /// </summary>
+        SupirorRaceAttackElse,
+        /// <summary>
+        /// Kill anything, overrides all other options.
+        /// </summary>
+        AttackGenocide
+    }
     public enum FiveSenses
     {
         /// <summary>
@@ -660,6 +693,25 @@ public class Enums
         /// Inspects whats its consuming.
         /// </summary>
         Taste
+    }
+    public enum SoundType
+    {
+        /// <summary>
+        /// Used as a "ignore" fuction. Has the least priority
+        /// </summary>
+        Other,
+        /// <summary>
+        /// ANYTHING that moves as a living creature.
+        /// </summary>
+        Movement,
+        /// <summary>
+        /// Somthing that deals damage
+        /// </summary>
+        Attack,
+        /// <summary>
+        /// Run away from (explosives, alerts, etc...)
+        /// </summary>
+        Danger,
     }
     #endregion
 }

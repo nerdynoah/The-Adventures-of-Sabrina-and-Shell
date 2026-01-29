@@ -2,7 +2,6 @@ using BaseCharacter.Entity;
 using BaseCharacter;
 using BaseCharacter.Movement;
 using BaseCharacter.Stats;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using static Enums;
@@ -10,8 +9,10 @@ public class CharacterTemplete : MonoBehaviour
 {
     [Header("Character Info")]
     [SerializeField] Texture icon;
-    [SerializeField][Tooltip("Name of the character. Used in search via the AllLibary class. This will not override a Player's name unless specified otherwise")] private string Name;
+    [SerializeField][Tooltip("ShooterName of the character. Used in search via the AllLibary class. This will not override a Player's name unless specified otherwise")] private string Name;
     [SerializeField][TextArea(3, 8)] private string Description;
+    [SerializeField] private string[] friends;
+    [SerializeField] private string[] enemies;
     [Header("Health")]
     [SerializeField][Min(1)] private int MaxHealth = 50;
     [SerializeField, Range(0.01f, 1f)] private float StartingHealthPercent = 1f;
@@ -52,6 +53,8 @@ public class CharacterTemplete : MonoBehaviour
     [SerializeField][Min(0)] private int AmountOfGroundPounds= 1;
     [SerializeField][Min(0f)] private float GpoundForce = 100;
     [SerializeField][Min(0f)] private float incrementByLevelGpounds = 0.1f;
+    [Header("Reach Range")]
+    [SerializeField][Min(1)] private float range;
     [Header("Vision")]
     [SerializeField] private CameraMode CameraMode = CameraMode.FirstPerson;
     [SerializeField][Min(0f)] private float Vision = 100f;
@@ -62,6 +65,13 @@ public class CharacterTemplete : MonoBehaviour
     [Header("Gravity")]
     [SerializeField][Tooltip("Leave a 1 by default")] private float gravityStrength = 1f;
     [SerializeField] private float gravityProtectionTime = 0.5f;
+    [Header("HearingBase")]
+    [SerializeField][Min(0)][Tooltip("The higher the number, the more you can hear")] private float Hearing = 50f;
+    [SerializeField] private float IncreasePerLevel = 0;
+    [Header("Stench")]
+    [SerializeField][Min(0)] private float StrengthOfStench = 80f;
+    [SerializeField] private float incrementByLevelStench = -0.3f;
+    [SerializeField] private Color colorOfStench;
 
     private MovingSystemKeyboard move;
     private GRDPound gRDPound;
@@ -73,6 +83,8 @@ public class CharacterTemplete : MonoBehaviour
     private Stat gPound;
     private Stat vision;
     private Stat aim;
+    private Stat hearing;
+    private Stat stench;
     private Player player;
     public Character Character { get { return Init(); } }
     private Character Init()
@@ -89,10 +101,13 @@ public class CharacterTemplete : MonoBehaviour
         jump = new Stat("Jump", JumpForce, incrementByLevelSpeed);
         gPound = new Stat("Gpound",GpoundForce, incrementByLevelSpeed);
         vision = new Stat("Vision", Vision, incrementByLevelSpeed);
+        hearing = new Stat("HearingBase", Hearing, incrementByLevelSpeed);
         aim = new Stat("Aim", Aim, incrementByLevelAim);
-        player.SetupStats(health, speed, jump, gPound, vision,aim);
+        stench = new Stat("Stench", StrengthOfStench, incrementByLevelStench);
+        player.SetupStats(health, speed, jump, gPound, vision,aim,hearing, stench);
         player.SetupMovement(gravityStrength,AcclerationSpeed,BreakingSpeed,gravityProtectionTime);
-        return new Character(Name, player, move, gRDPound, jumpSystem, airmovement, JumpDelay);
+        player.SetReachRange(range);
+        return new Character(Name, player, move, gRDPound, jumpSystem, airmovement, JumpDelay,colorOfStench, icon);
     }
 
 }

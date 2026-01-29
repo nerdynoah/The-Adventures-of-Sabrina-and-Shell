@@ -9,7 +9,7 @@ public class PlayerShadow : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        RaycastHit[] hits = Physics.RaycastAll(transform.position, direction);
+        RaycastHit[] hits = Physics.RaycastAll(transform.position, direction,float.MaxValue, (1 << 0) | (1 << 3));
         float closestDist = int.MaxValue;
         foreach (RaycastHit hit in hits)
         {
