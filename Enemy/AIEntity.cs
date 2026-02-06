@@ -5,11 +5,5 @@ using UnityEngine;
 public class AIEntity : MonoBehaviour
 {
     [SerializeField] private EntityTemplete entityTemplete;
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
     
 }

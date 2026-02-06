@@ -1,5 +1,4 @@
 using BaseCharacter;
-using BaseCharacter.Effects;
 using BaseCharacter.Entity;
 using BaseCharacter.FiveSenses.Scent;
 using BaseCharacter.Items;
@@ -79,7 +78,6 @@ public class Walking : MonoBehaviour, IHasCharacter
         worldRun = WorldRun.Instance;
         SlashRegex.SetChatRegexLimited(SaveData.GetDefaults(), out string setupPlayer, out List<AddItemRequest> items, out List<string> attri);
         SaveData.GetAttributesToLibary();
-        
         int hotbar = 9;
         int ammo = 18;
         int shoe = 2;
@@ -393,8 +391,8 @@ public class Walking : MonoBehaviour, IHasCharacter
         {
             //SlashRegex.GetSlashSearchType(text: chatManager.GetInputText(), matches: out MatchCollection commands);
             //chatManager.GetInputText().TrimEnd();
-            SaveData.AppendTextHistory(chatManager.GetInputText().TrimEnd(),false);
-            SlashRegex.GetChatBoxRegex(text: chatManager.GetInputText(), inventorySize: Player.GetInventorySize(), out List<AttributesTemplete> attributes, out List<AddItemRequest> items, out List<string> msgs, out bool clear, out float jump, out bool getAllItems, out bool max, out RegexOrderItems orderBy, out string charact,out string error);
+            SaveData.AppendTextHistory(chatManager.GetInputText().TrimEnd(),true);
+            SlashRegex.GetChatBoxRegex(text: chatManager.GetInputText(), inventorySize: Player.GetInventorySize(), out List<AttributesTemplete> attributes, out List<AddItemRequest> items, out List<string> msgs, out ClearThings clear, out float jump, out bool getAllItems, out bool max, out RegexOrderItems orderBy, out string charact,out string error);
             string text = string.Concat(msgs.ToArray());
             Debug.LogWarning(error);
             msgs.Clear();
@@ -403,9 +401,13 @@ public class Walking : MonoBehaviour, IHasCharacter
             {
                 body.AddRelativeForce(new Vector3(0, jump, 0), ForceMode.VelocityChange);
             }
-            if (clear)
+            if (clear.Inventory)
             {
                 Player.FillNullInventory();
+            }
+            if (clear.Effect)
+            {
+                Player.ClearAllEffects();
             }
             if (charact != null)
             {

@@ -1,10 +1,9 @@
 using BaseCharacter.Effects;
 using BaseCharacter.Entity;
-using BaseCharacter.FiveSenses.HearingSounds;
+using BaseCharacter.Structual;
 using BaseCharacter.Items;
 using BaseCharacter.Movement;
 using BaseCharacter.Stats;
-using JetBrains.Annotations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -91,6 +90,10 @@ namespace BaseCharacter
         /// <returns></returns>
         public GameObject GetGameObject();
     }
+    /// <summary>
+    /// The greatest regex system ever created.
+    /// lets you write multiple commands in one line, has parameters and annotations.
+    /// </summary>
     public static class SlashRegex
     {
         /// <summary>
@@ -106,7 +109,6 @@ namespace BaseCharacter
         /// </code>
         /// </summary>
         public static Regex SlashCommands { get; private set; } = new Regex(@"(?<=^|\s)\/(?<command>\w+)(?:\s+(?<params>(?<param>[^\/@#$%&\*\-\+\=\s]+)(?:(?:\s+|,\s*)(?<param>[^\/@#$%&\-\*\+\=\s]+))*(?=\s|$))?)?(?:\s*)(?<annotations>(?<annotation>[@#$%&\*\-\+\=])(?<text>[\w]*)(?:\s*(?<annotation>[@#$%&\*\-\+\=]+)*(?<text>[\w]+))*)?\b", RegexOptions.Compiled);
-
         //public static Regex SlashCommands { get; private set; } = new Regex(@"(?<=^|\s)\/(?<command>\w+)(?:\s+)(?<params>(?<param>[^/@#$%&*\s]+)(?:(?:\s+|,\s*)(?<param>[^/@#$%&*\s]+))*(?=\s|$))?", RegexOptions.Compiled);
         // public static Regex Annotation { get; private set; } = new Regex(@"(?<annotation>[@#$%&*])(?<text>[0-zA-Z]+)\b");
         /// <summary>
@@ -248,40 +250,54 @@ namespace BaseCharacter
         public static LibraryObjects GetSlashLibarySearch(Match match, int index, bool ReturnDefault = true)
         {
             CaptureCollection conditions = match.Groups["param"].Captures;
-            string condition = conditions[index].Value.ToLower();
-            switch (condition)
+            try
             {
-                case "effect":
-                case "eff":
-                case "ef":
-                case "e":
-                    return (LibraryObjects.AttributeTemplete);
-                case "entity":
-                case "ent":
-                case "enemy":
-                case "Player":
-                case "play":
-                case "p":
-                    return (LibraryObjects.Entities);
-                case "it":
-                case "ite":
-                case "item":
-                case "inventoryitem":
-                case "inv":
-                case "i":
-                    return (LibraryObjects.InventoryItem);
-                case "quest":
-                case "q":
-                    return (LibraryObjects.Quests);
-                case "character":
-                case "char":
-                case "c":
-                    return (LibraryObjects.Character);
-                default:
-                    if (!ReturnDefault)
-                        return (LibraryObjects.None);
-                    return DefaultLibaryObject;
+                string condition = conditions[index].Value.ToLower();
+                switch (condition)
+                {
+                    case "effect":
+                    case "eff":
+                    case "ef":
+                    case "e":
+                        return (LibraryObjects.AttributeTemplete);
+                    case "entity":
+                    case "ent":
+                    case "enemy":
+                    case "Player":
+                    case "play":
+                    case "p":
+                        return (LibraryObjects.Entities);
+                    case "it":
+                    case "ite":
+                    case "item":
+                    case "inventoryitem":
+                    case "inv":
+                    case "i":
+                        return (LibraryObjects.InventoryItem);
+                    case "quest":
+                    case "q":
+                        return (LibraryObjects.Quests);
+                    case "character":
+                    case "char":
+                    case "c":
+                        return (LibraryObjects.Character);
+                    default:
+                        if (!ReturnDefault)
+                            return (LibraryObjects.None);
+                        return DefaultLibaryObject;
+                }
             }
+            catch (ArgumentOutOfRangeException)
+            {
+                if (!ReturnDefault)
+                    return (LibraryObjects.None);
+                return DefaultLibaryObject;
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+            return LibraryObjects.None;
         }
         /// <summary>
         /// Gets the rest of the params as strings from <paramref name="match"/>
@@ -583,7 +599,7 @@ namespace BaseCharacter
         /// <param name="inventorySize">The size of the Player's inventory (use to prevent errors)</param>
         /// <param name="attributes">Attributes collected(as a string)</param>
         /// <param name="items">Items collected (as a string)</param>
-        public static void GetChatBoxRegex(string text, int inventorySize, out List<AttributesTemplete> attributes, out List<AddItemRequest> items, out List<string> msgData, out bool clear, out float jump, out bool getAllItems, out bool maxInventory, out RegexOrderItems orderBy, out string charact, out string error)
+        public static void GetChatBoxRegex(string text, int inventorySize, out List<AttributesTemplete> attributes, out List<AddItemRequest> items, out List<string> msgData, out ClearThings clear, out float jump, out bool getAllItems, out bool maxInventory, out RegexOrderItems orderBy, out string charact, out string error)
         {
             error = string.Empty;
             jump = 0;
@@ -592,7 +608,7 @@ namespace BaseCharacter
             attributes = new List<AttributesTemplete>();
             items = new List<AddItemRequest>();
             msgData = new List<string>();
-            clear = false;
+            clear = new ClearThings(false,false);
             charact = null;
             orderBy = RegexOrderItems.KeepAsIs;
             List<RegexSearchType> regexSearch = SlashRegex.GetSlashSearchType(text: text, matches: out MatchCollection commands);
@@ -904,8 +920,24 @@ namespace BaseCharacter
                 }
                 if (regexSearch[i] == RegexSearchType.Clear)
                 {
-                    clear = true;
-                    //TODO: Add parameters to remove effects, items, Character
+                    List<string> parameters = GetSlashParamStrings(commands[i], 1, commands[i].Groups["param"].Captures.Count);
+                    LibraryObjects which = SlashRegex.GetSlashLibarySearch(commands[i], 0);
+                    if (which == LibraryObjects.InventoryItem || which == LibraryObjects.None)
+                    {
+                        clear = new ClearThings(true, false);
+                    }
+                    if (which == LibraryObjects.AttributeTemplete)
+                    {
+                        clear = new ClearThings(false, true);
+                    }
+                    if (which == LibraryObjects.Character)
+                    {
+                        clear = new ClearThings(false, false, true);
+                    }
+                    if (which == LibraryObjects.Quests)
+                    {
+                        clear = new ClearThings(false, false, false,true);
+                    }
                 }
                 if (regexSearch[i] == RegexSearchType.Die)
                 {
@@ -1332,6 +1364,26 @@ namespace BaseCharacter
             public float GetPriority()
             {
                 return priority;
+            }
+        }
+        public struct ClearThings
+        {
+            public bool Inventory { get; private set; }
+            public bool Effect { get; private set; }
+            public bool Character { get; private set; }
+            public bool Quests { get; private set; }
+            /// <summary>
+            /// Clear things from a character
+            /// </summary>
+            /// <param name="invent">Clear inventory</param>
+            /// <param name="effect">Clear Effects</param>
+            /// <param name="character">Clear Character</param>
+            public ClearThings(bool invent, bool effect, bool character = false, bool quests = false)
+            {
+                Inventory = invent;
+                Effect = effect;
+                Character = character;
+                Quests = quests;
             }
         }
     }
@@ -7592,6 +7644,11 @@ namespace BaseCharacter
             }
             public StatAdjustment() { }
         }
+        public class StatGenerator
+        {
+            public Stat stat { get; private set; }
+            public StatAdjustment statAdjustment { get; private set; }
+        }
         public interface IStatAdjustment
         {
             float EndTime { get; }
@@ -7773,7 +7830,18 @@ namespace BaseCharacter
                     return Aim.Max * AimAdjustment.Strength + CryingAim;
                 }
             }
-            private float CryingAim = 0;
+            private float CryingAim
+            {
+                get
+                {
+                    float value = 0;
+                    for (int i = 0; i < Cryings.Count; i++)
+                    {
+                        value += Cryings[i].GetInaccuracy();
+                    }
+                    return value;
+                }
+            }
             /// <summary>
             /// Attribute Fire damage
             /// </summary>
@@ -8310,25 +8378,49 @@ namespace BaseCharacter
                 }
             }
             /// <summary>
-            /// Progress attribtues to the next phase of the game.
+            /// Create firedamage. (Will stack multiple fire damages together)
             /// </summary>
             protected void SetFireDamage(float damage, float time, float tickRate)
             {
                 FireDamage.Add(new FireDamage(damage, time, tickRate));
             }
+            /// <summary>
+            /// Fly upwards (does not stack values, takes the strongest value)
+            /// </summary>
+            /// <param name="strength"></param>
+            /// <param name="time"></param>
+            /// <param name="lift"></param>
             protected void SetFlyatation(float strength, float time, float lift)
             {
                 Floating.SetupFloatation(strength, time, lift);
                 Gravity = Floating.ResetGravity(GravityBase);
             }
+            /// <summary>
+            /// Create regeneration (will stack multiple regens together)
+            /// </summary>
+            /// <param name="health"></param>
+            /// <param name="time"></param>
+            /// <param name="tickRate"></param>
             protected void SetRegeneration(float health, float time, float tickRate)
             {
                 ActiveRegenerations.Add(new Regeneration(health, time, tickRate));
             }
+            /// <summary>
+            /// Create crying, which makes you less accurate (wiill stack)
+            /// </summary>
+            /// <param name="strength"></param>
+            /// <param name="time"></param>
+            /// <param name="speedInc"></param>
             protected void SetCrying(float strength, float time, float speedInc)
             {
                 Cryings.Add(new Crying(strength, time, speedInc));
             }
+            /// <summary>
+            /// HAHAHAH I HAVE NO CLUE
+            /// </summary>
+            /// <param name="resistance"></param>
+            /// <param name="time"></param>
+            /// <param name="absorption"></param>
             protected void SetWounded(float resistance, float time, float absorption)
             {
                 Wound.SetupResistance(resistance, time, absorption);
@@ -8404,7 +8496,6 @@ namespace BaseCharacter
             }
             public void ApplyCrying()
             {
-                CryingAim = 0;
                 if (Cryings.Count > 0)
                 {
                     for (int i = 0; i < Cryings.Count; i++)
@@ -8412,10 +8503,6 @@ namespace BaseCharacter
                         if (Cryings[i].GetExistTime())
                         {
                             Cryings.RemoveAt(i);
-                        }
-                        else
-                        {
-                            CryingAim += Cryings[i].GetInaccuracy();
                         }
                     }
                 }
@@ -8435,6 +8522,35 @@ namespace BaseCharacter
                 ApplyFlytation();
                 ApplyWounded();
             }
+            public void ClearAllEffects()
+            {
+                ClearFireDamage();
+                ClearRegeneration();
+                ClearCrying();
+                ClearFlytation();
+                SpeedBonus = new StatAdjustment();
+                JumpBonus = new StatAdjustment();
+                GroundPoundBonus = new StatAdjustment();
+                VisionAdjustment = new StatAdjustment();
+                WeightAdjustment = new StatAdjustment();
+                AimAdjustment = new StatAdjustment();
+            }
+            public void ClearFireDamage()
+            {
+                FireDamage.Clear();
+            }
+            public void ClearRegeneration()
+            {
+                ActiveRegenerations.Clear();
+            }
+            public void ClearFlytation()
+            {
+                Floating = new Floatation(GravityBase);
+            }
+            public void ClearCrying()
+            {
+                Cryings.Clear();
+            }
             public bool GetIsRegeenrating()
             {
                 return ActiveRegenerations.Count > 0;
@@ -8450,7 +8566,6 @@ namespace BaseCharacter
                 VisionAdjustment.CheckTime();
                 WeightAdjustment.CheckTime();
                 AimAdjustment.CheckTime();
-
             }
             #endregion
         }
@@ -9930,6 +10045,8 @@ namespace BaseCharacter
 
             return gameObjects;
         }
+        public static float ScreenWidthFactor { get; private set; } = (float)Screen.width / 1920f;
+        public static float ScreenHightFactor { get; private set; } = (float)Screen.width / 1080f;
     }
     /// <summary>
     /// Holds a collection of classes that make up a fully operationaly character. 

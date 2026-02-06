@@ -14,7 +14,7 @@ public class EntityTemplete : MonoBehaviour, IHasCharacter
 {
     [Header("Entity Body")]
     [SerializeField] private GameObject Body;
-    [SerializeField] private CapsuleCollider outline; 
+    [SerializeField] private Collider outline; 
     [SerializeField] private string Name;
     [SerializeField][TextArea(4,8)] private string Desc;
     [SerializeField] private string PresetCharacterName;
@@ -42,7 +42,7 @@ public class EntityTemplete : MonoBehaviour, IHasCharacter
     [SerializeField] private SummonStench summonStench;
     [Header("Mood and AI")]
     [SerializeField] private AttackWho[] whoToAttack = new AttackWho[Enum.GetValues(typeof(AttackWho)).Length];
-    [SerializeField] private FiveSenses fiveSenses;
+    [SerializeField] public FiveSenses fiveSenses;
     public Character character = new Character(Classes.Vampire);
     private MovingSystemKeyboard moveSys => character.MoveSys;
     private JumpSystem JumpSys => character.JumpSys;
@@ -334,7 +334,7 @@ public class EntityTemplete : MonoBehaviour, IHasCharacter
         {
             lookingArea /= 80f;
         }
-        spawnForwardOffset += Mathf.Lerp(0.2f, 0.8f + outline.height, lookingArea); //Adjust the value in the middle
+        spawnForwardOffset += Mathf.Lerp(0.1f, 0.2f, lookingArea); //Adjust the value in the middle
         return placementRay.origin + placementRay.direction * spawnForwardOffset;
     }
 

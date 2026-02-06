@@ -10,16 +10,16 @@ public class AnimationManager : MonoBehaviour
     /// <summary>
     /// Size of inventory
     /// </summary>
-    protected float Timer { get; set; }
-    protected float IncriTime { get; set; }
+    private float Timer { get; set; }
+    private float IncriTime { get; set; }
     /// <summary>
     /// Freeze Animations
     /// </summary>
-    protected bool freeze = false;
-    protected int CurrentFrame { get; set; } = 0;
-    protected int EndFrame { get; set; } = 0;
-    protected int StartFrame { get; set; }
-    protected int LoopRemains { get; set; } = 0;
+    private bool freeze = false;
+    private int CurrentFrame { get; set; } = 0;
+    private int EndFrame { get; set; } = 0;
+    private int StartFrame { get; set; }
+    private int LoopRemains { get; set; } = 0;
     /// <summary>
     /// Selected item
     /// </summary>
@@ -27,12 +27,12 @@ public class AnimationManager : MonoBehaviour
     /// <summary>
     /// Currenlty displayed Texture
     /// </summary>
-    [SerializeField] Texture display;
-    [SerializeField] RawImage rawimage;
+    [SerializeField] private Texture display;
+    [SerializeField] private RawImage rawimage;
     /// <summary>
     /// Animations
     /// </summary>
-    protected AnimationSys Anim { get; set; }
+    private AnimationSys Anim { get; set; }
     /// <summary>
     /// Set the animation on the UI to the weapon being selected in the Hotbar.
     /// </summary>
