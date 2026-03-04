@@ -5,6 +5,14 @@ public class WorldRun : MonoBehaviour
 {
     public static WorldRun Instance { get; private set; }
     private const float GRAVITY = -9.806f;
+    public float GAMEDELAY 
+    { 
+        get
+        {
+            return 0.1f;
+        }
+    }
+    public float SMELLDELAY { get { return 0.5f; } }
     [Tooltip("9.806f * Adjustment")]
     [SerializeField] private float gravityAdj = 1;
     /// <summary>

@@ -294,8 +294,8 @@ public class Enums
         /// </summary>
         Give = 5,
         //unused commands, only used for /help
-        AttributeTemplete = 6,
-        InventoryItem = 7,
+        AttributeTemplete = 6, // using /effect works the same as /give effect
+        InventoryItem = 7, // using /item works the same as /give item
         Entities = 8,
         Quests = 9,
         LibaryObjects = 10,
@@ -326,6 +326,9 @@ public class Enums
         /// Switch libary objects of 2 entities.
         /// </summary>
         Switch,
+        /// <summary>
+        /// Order items in a List.
+        /// </summary>
         Order,
     }
     public enum RegexOrderItems
@@ -343,6 +346,7 @@ public class Enums
         None = 1,
         Target = 2, //@
         Amount = 3, //#
+
     }
     /// <summary>
     /// @ annotation
@@ -409,16 +413,9 @@ public class Enums
     /// Set the mode based on toggle
     /// </summary>
     /// <param name="toggle">True = Third, False = First</param>
-    public static void SetCameraMode(bool toggle)
+    public static void SetCameraMode(CameraMode mode)
     {
-        if (toggle)
-        {
-            camera = CameraMode.TopDownPerspective;
-        }
-        else
-        {
-            camera = CameraMode.FirstPerson;
-        }
+        camera = mode;
     }
     #endregion
     #region Inventory and UI

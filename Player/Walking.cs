@@ -7,6 +7,7 @@ using BaseCharacter.Structual;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor.ShaderGraph;
 using UnityEngine;
 using static Enums;
 
@@ -17,9 +18,9 @@ public class Walking : MonoBehaviour, IHasCharacter
     [SerializeField] private Vision vision;
     [SerializeField] private Rigidbody body;
     [SerializeField] private HurtBox hurtBox;
-    [Header("Five Scenes")]
-    [SerializeField] private SummonStench summonStench;
-    [SerializeField] private Nose nose;
+    [Header("Sensors and Auto")]
+    [SerializeField] private FiveSenses fiveSenses;
+    [SerializeField] private AIEntity entity;
     [Header("Player Structure data")]
     [SerializeField] private PlayerShadow shadow;
     [SerializeField] private GameObject[] DistanceFeet;
@@ -47,16 +48,15 @@ public class Walking : MonoBehaviour, IHasCharacter
     [SerializeField] private float groundContactOffset = 1f;
     [SerializeField] private float maxSlopeAngle = 80f;
     //Movement
-    private Character character = new Character(Classes.Vampire);
-    private MovingSystemKeyboard moveSys => character.MoveSys;
-    private JumpSystem jumpSys => character.JumpSys;
-    private GRDPound gPound => character.Gpound;
-    private AirMovement airMent => character.AirMent;
-    private Player Player { get => character.Player; set { character.SetPlayer(value); } }
+    public Character Character { get; private set; } = new Character(Classes.Vampire);
+    private MovingSystemKeyboard moveSys => Character.MoveSys;
+    private JumpSystem jumpSys => Character.JumpSys;
+    private GRDPound gPound => Character.Gpound;
+    private AirMovement airMent => Character.AirMent;
+    public Player Player { get => Character.Player; private set { Character.SetPlayer(value); } }
     private readonly List<InventorySystem> ExtraDisplayCase;
-    private float JUMPDELAY => character.JUMPDELAY; //0.128f;
-    private readonly float GAMEDELAY = 0.1f;
-    private readonly float SMELLDELAY = 0.5f;
+    private float JUMPDELAY => Character.JUMPDELAY; //0.128f;
+    
     private float smellDelay;
     private float jumpDelay;
     private bool InMenu { get; set; } = false;
@@ -71,7 +71,60 @@ public class Walking : MonoBehaviour, IHasCharacter
         }
     }
     private float FastestFall;
-    public string CharacterName { get { return character.CharacterName; } }
+    public string CharacterName { get { return Character.CharacterName; } }
+    public void Setup(EntityTemplete templete)
+    {
+        Character = templete.character;
+        worldRun = WorldRun.Instance;
+        try
+        {
+            reaching = GetComponentInChildren<ReachRange>();
+        }
+        catch
+        {
+            reaching = gameObject.AddComponent<ReachRange>();
+        }
+        try
+        {
+            vision = GetComponentInChildren<Vision>();
+        }
+        catch
+        {
+            vision = gameObject.AddComponent<Vision>();
+        }
+        try
+        {
+            body = GetComponent<Rigidbody>();
+        }
+        catch
+        {
+            body = gameObject.AddComponent<Rigidbody>();
+        }
+        try
+        {
+            hurtBox = GetComponentInChildren<HurtBox>();
+        }
+        catch
+        {
+            try
+            {
+                hurtBox = GetComponent<HurtBox>();
+            }
+            catch
+            {
+                hurtBox = gameObject.AddComponent<HurtBox>();
+            }
+        }
+        try
+        {
+            fiveSenses = GetComponent<FiveSenses>();
+        }
+        catch
+        {
+            fiveSenses = gameObject.AddComponent<FiveSenses>();
+        }
+        SetUIAndPlayer();
+    }
     
     void Start()
     {
@@ -93,7 +146,7 @@ public class Walking : MonoBehaviour, IHasCharacter
             Character thing = AllLibary.ItemLibary.SearchLibaryForCharacter(setupPlayer);
             if (thing != null)
             {
-                character = new Character(thing, new Player(thing.Player, new Player("Nell Shell", "", invoSlots, 5000,100)));
+                Character = new Character(thing, new Player(thing.Player, new Player("Nell Shell", "", invoSlots, 5000,100)));
                 Player.FillNullInventory();
                 Player.ApplyAttribute(AllLibary.ItemLibary.SearchLibaryForAttribute(attri.ToArray()));
                 for (int i = 0; i < SaveData.GetInventoryItems().Count; i++)
@@ -133,22 +186,26 @@ public class Walking : MonoBehaviour, IHasCharacter
             Player.SetupMovement(40f, 24f, 100f, 1f, 0.4f, 0.92f, 1f);
         }
         Player.SetupHotbar(hotbar, 0);
-        invManager.SetupInventorySize(Player.GetInventorySize(), Player.GetHotbarSize(), 0, 0.75f, 85f, 3, 0.135f, 50f,0.5f,80f);
+        SetUIAndPlayer();
+    }
+    private void SetUIAndPlayer()
+    {
+        invManager.SetupInventorySize(Player.GetInventorySize(), Player.GetHotbarSize(), 0, 0.75f, 85f, 3, 0.135f, 50f, 0.5f, 80f);
         List<int> hpInfo = Player.Health.GetHPInfo();
 
         body = GetComponent<Rigidbody>();
         //UI control
-        Health.SetupHealthUI(hpInfo[0], hpInfo[1], 5.2f, 9.01f);
+        Health.SetupHealthUI(hpInfo[0], hpInfo[1], 6f, 10.01f);
         //Bubbles
-        reaching.SetReach(Mathf.Max(Player.GetReach(),5));
+        reaching.SetReach(Mathf.Max(Player.GetReach(), 5));
         vision.SetSize(Player.Vision);
         SetLoadData(true);
         //Inventory
         StartSpeedRun();
 
         //UI scaling
-        scaleDown.SetupScale(Mathf.Max(Mathf.Abs(Gravity * 2f),Player.GroundPoundBase.Max * 4.5f,98));
-        scaleUp.SetupScale(Player.JumpBase.Max * 60f * character.JumpSys.JumpsBase + character.JumpSys.murderJumpsBase);
+        scaleDown.SetupScale(Mathf.Max(Mathf.Abs(Gravity * 2f), Player.GroundPoundBase.Max * 4.5f, 98));
+        scaleUp.SetupScale(Player.JumpBase.Max * 60f * Character.JumpSys.JumpsBase + Character.JumpSys.murderJumpsBase);
         Player.ScrollItem(0);
         // Inventory UI visuals.
         invManager.RefreshFullInventory(Player);
@@ -157,11 +214,10 @@ public class Walking : MonoBehaviour, IHasCharacter
         invManager.RefreshFullInventory(Player);
         invManager.InventoryToggle();
         body.mass = Player.Weight / 100f;
-        generic.AddText("<b>You</b> have loaded in!\r<i>Wea</i> are now a fish!\rYou have loaded in!\rWea are now a fish!\rYou have loaded in!\nWea are now a fish!\r", false,1,2);
+        generic.AddText("<b>You</b> have loaded in!\r<i>Wea</i> are now a fish!\rYou have loaded in!\rWea are now a fish!\rYou have loaded in!\nWea are now a fish!\r", false, 1, 2);
         //I want the crosshair to be able to pick items from MUCH further away, I think I'll just make a very huge value. Somthing within a average person's render distance.
         reaching.CrossHairReach = 2000;
-        CanAmountJumps.SetupY(8f, character.JumpSys.murderJumpsBase + character.JumpSys.JumpsBase);
-        //character.SwitchCharacter(Classes.LeatherBird);
+        CanAmountJumps.SetupY(8f, Character.JumpSys.murderJumpsBase + Character.JumpSys.JumpsBase);
     }
     private void GetHurtBoxData()
     {
@@ -212,6 +268,17 @@ public class Walking : MonoBehaviour, IHasCharacter
     }
     void Update()
     {
+        if (movement == null)
+        {
+            try
+            {
+                movement = GetComponentInChildren<Movement>();
+            }
+            catch
+            {
+                return;
+            }
+        }
         InInventory = invManager.GetFullInventoryOpen();
         InventoryItem item = Player.GetInventoryItemCurrentHotbar();
         if(item != null && item.GetPassiveData(Player))
@@ -258,7 +325,7 @@ public class Walking : MonoBehaviour, IHasCharacter
         {
             Player.CheckPassive();
             body.mass = Player.Weight / 100f;
-            timeGameDelay = Time.time + GAMEDELAY;
+            timeGameDelay = Time.time + worldRun.GAMEDELAY;
             if (InInventory)
             {
                 invManager.RefreshFullInventory(Player);
@@ -347,7 +414,7 @@ public class Walking : MonoBehaviour, IHasCharacter
         }
         else
         {
-            CanAmountJumps.Amount = character.JumpSys.Jumps + character.JumpSys.MurderJumps;
+            CanAmountJumps.Amount = Character.JumpSys.Jumps + Character.JumpSys.MurderJumps;
         }
     }
     private void ChatBox()
@@ -392,7 +459,7 @@ public class Walking : MonoBehaviour, IHasCharacter
             //SlashRegex.GetSlashSearchType(text: chatManager.GetInputText(), matches: out MatchCollection commands);
             //chatManager.GetInputText().TrimEnd();
             SaveData.AppendTextHistory(chatManager.GetInputText().TrimEnd(),true);
-            SlashRegex.GetChatBoxRegex(text: chatManager.GetInputText(), inventorySize: Player.GetInventorySize(), out List<AttributesTemplete> attributes, out List<AddItemRequest> items, out List<string> msgs, out ClearThings clear, out float jump, out bool getAllItems, out bool max, out RegexOrderItems orderBy, out string charact,out string error);
+            SlashRegex.GetChatBoxRegex(text: chatManager.GetInputText(), inventorySize: Player.GetInventorySize(), out List<AttributesTemplete> attributes, out List<AddItemRequest> items, out List<string> msgs, out ClearThings clear, out float jump, out bool getAllItems, out bool max, out RegexOrderItems orderBy, out string charact,out string error, out BaseCharacter.Structual.SwitchPerspective perspective);
             string text = string.Concat(msgs.ToArray());
             Debug.LogWarning(error);
             msgs.Clear();
@@ -411,11 +478,11 @@ public class Walking : MonoBehaviour, IHasCharacter
             }
             if (charact != null)
             {
-                character = new Character(AllLibary.ItemLibary.SearchLibaryForCharacter(charact),Player) ?? character;
+                Character = new Character(AllLibary.ItemLibary.SearchLibaryForCharacter(charact),Player) ?? Character;
                 body.mass = Player.Weight;
                 scaleDown.SetupScale(Mathf.Max(Mathf.Abs(Gravity * 2f), Player.GroundPoundBase.Max * 4.5f, 98));
-                scaleUp.SetupScale(Player.JumpBase.Max * 70f * (character.JumpSys.JumpsBase + character.JumpSys.MurderJumps));
-                CanAmountJumps.SetupY(8f, character.JumpSys.murderJumpsBase + character.JumpSys.JumpsBase);
+                scaleUp.SetupScale(Player.JumpBase.Max * 70f * (Character.JumpSys.JumpsBase + Character.JumpSys.MurderJumps));
+                CanAmountJumps.SetupY(8f, Character.JumpSys.murderJumpsBase + Character.JumpSys.JumpsBase);
             }
             if (getAllItems)
             {
@@ -448,6 +515,19 @@ public class Walking : MonoBehaviour, IHasCharacter
             {
                 Player.MaxOutItems();
             }
+            if (perspective.CameraMode != null)
+            {
+                SetCameraMode((CameraMode)perspective.CameraMode);
+            }
+            if (perspective.RegexModifier.Contains(RegexTarget.LookingAt))
+            {
+                RaycastHit hit = movement.GetRayPoint(0, 0, (1 << 3) | (1 << 7));
+                if (hit.collider.gameObject.GetHashCode() != gameObject.GetHashCode() && hit.collider.TryGetComponent<AIEntity>(out AIEntity entitySwapper) && hit.collider.TryGetComponent<EntityTemplete>(out EntityTemplete entity))
+                {
+                    entitySwapper.SwapPerspectives(this, entity, perspective.SwitchItems);
+                    this.entity.MakeEntityDestroyCamera(this, movement.gameObject);
+                }
+            }
             invManager.RefreshFullInventory(Player);
             if (error != string.Empty)
             {
@@ -458,7 +538,7 @@ public class Walking : MonoBehaviour, IHasCharacter
         }
         if (Input.GetKeyDown(KeyCode.Period) && !InInventory && InMenu == false)
         {
-            SaveData.SaveGame(character, new WorldLocation(Methods.GetCurrentSceneName(), transform.position));
+            SaveData.SaveGame(Character, new WorldLocation(Methods.GetCurrentSceneName(), transform.position));
         }
         if (Input.GetKeyDown(KeyCode.Comma) && !InInventory && InMenu == false)
         {
@@ -579,10 +659,13 @@ public class Walking : MonoBehaviour, IHasCharacter
         // Perform the actual swap
         Player.SwapItem(swap[0], swap[1]);
         //Update textures
+        /*
         invManager.RemoveSelectItem(swap[0]);
         invManager.RemoveSelectItem(swap[1]);
         invManager.RefreshFullInventory(Player);
         invManager.SetSelectedItem(Player.GetHotbarSlot());
+        */
+        invManager.SwapItems(swap, Player);
     }
     private void UtilizeInventory()
     {
@@ -608,7 +691,7 @@ public class Walking : MonoBehaviour, IHasCharacter
             Debug.Log(sel + " was previously selected");
             if (sel < 0)
             {
-                Player.SelectItem(hotbarslot);
+                Player.SetPendingItem(hotbarslot);
                 invManager.SelectItem(hotbarslot);
             }
             else
@@ -911,7 +994,7 @@ public class Walking : MonoBehaviour, IHasCharacter
         {
             return false;
         }
-        RaycastHit[] hits = Physics.RaycastAll(transform.position, Vector3.down, groundCheckDistance + playerBody.height/2f);
+        RaycastHit[] hits = Physics.RaycastAll(transform.position, Vector3.down, groundCheckDistance + playerBody.height/2f,(1 << 0) | (1 << 3));
         for (int i = 0; i < hits.Length; i++)
         {
             // Skip if collider hits self
@@ -926,7 +1009,7 @@ public class Walking : MonoBehaviour, IHasCharacter
             // Check if we're on stable ground
             float angle = Vector3.Angle(Vector3.up, hits[i].normal);
             bool isStableOnGround = angle <= maxSlopeAngle;
-            FallDamage(isStableOnGround, Player.GravityProtectionTime,100,30);
+            FallDamage(isStableOnGround, Player.GravityProtectionTime,100,25);
             return isStableOnGround;
         }
         return false;
@@ -1042,11 +1125,10 @@ public class Walking : MonoBehaviour, IHasCharacter
         scaleUp.ApplyScale(Gravity);
         //Debug.Log($"Body.Velocity {body.velocity}");
         Player.ApplyStatAdjustments();
-        if (!ScentTools.CharactersOwnSmell(character,transform.position) && nose.ShouldCreateNewScent(character) && Time.time > smellDelay)
+        if (!ScentTools.CharactersOwnSmell(Character,transform.position) && fiveSenses.GetNose().ShouldCreateNewScent(Character) && Time.time > smellDelay)
         {
-            summonStench.SummonBubble(character, transform.position);
-            smellDelay = Time.time + SMELLDELAY;
-            summonStench.ToString();
+            fiveSenses.SummonScent(Character,transform.position);
+            smellDelay = Time.time + worldRun.SMELLDELAY;
         }
 
     }
@@ -1094,22 +1176,22 @@ public class Walking : MonoBehaviour, IHasCharacter
 
     public string GetName()
     {
-        return ((IName)character).GetName();
+        return ((IName)Character).GetName();
     }
 
     public bool GetName(string name)
     {
-        return ((IName)character).GetName(name);
+        return ((IName)Character).GetName(name);
     }
 
     public string GetCharName()
     {
-        return character.CharacterName;
+        return Character.CharacterName;
     }
 
     public bool GetCharName(string name)
     {
-        return (character.CharacterName == name);
+        return (Character.CharacterName == name);
     }
     public bool IsPlayablePlayer()
     {
@@ -1118,12 +1200,12 @@ public class Walking : MonoBehaviour, IHasCharacter
 
     public string GetDesc()
     {
-        return ((INameDesc)character).GetDesc();
+        return ((INameDesc)Character).GetDesc();
     }
 
     public bool GetDesc(string name)
     {
-        return ((INameDesc)character).GetDesc(name);
+        return ((INameDesc)Character).GetDesc(name);
     }
 
     public GameObject GetGameObject()

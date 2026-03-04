@@ -235,6 +235,7 @@ public class AllLibary : MonoBehaviour
         }
         public List<AttributesTemplete> GetAllEffects() => Attributes.Values.ToList();
         public List<EntityTemplete> GetAllEntites() => Entities.Values.ToList();
+        public List<Character> GetAllCharacters() => Persons.Values.ToList();
 
         public Quest GetQuest(string name)
         {
@@ -453,8 +454,6 @@ public class AllLibary : MonoBehaviour
         libary.AddAttribute(new AttributesTemplete("Regeneration 3", Attributes.Regeneration, 0.225f, 8, 0.15f));
         libary.AddAttribute(new AttributesTemplete("Regeneration Sniper", Attributes.Regeneration, 1.2f, 5, 0.6f));
         libary.AddAttribute(new AttributesTemplete("Max heal", Attributes.Regeneration, 90, 0.5f, 0.01f));
-
-
         
         libary.AddAttribute(new AttributesTemplete("Bump on yo head", Attributes.Bigger, 2, 10, 1)); //TODO: Implement
 
@@ -717,8 +716,13 @@ public class AllLibary : MonoBehaviour
     {
         return libary.GetEntitityNames();
     }
+    public List<string> GetCharacterNames()
+    {
+        return libary.GetCharacterNames();
+    }
     public List<InventoryItem> GetAllItems() => libary.GetAllItems();
     public List<AttributesTemplete> GetAllEffects() => libary.GetAllEffects();
     public List<EntityTemplete> GetAllEntities() => libary.GetAllEntites();
+    public List<Character> GetCharacterTempletes() => libary.GetAllCharacters();
     #endregion
 }

@@ -65,6 +65,72 @@ public class EntityTemplete : MonoBehaviour, IHasCharacter
         }
     }
     public List<string> Attackers { get; private set; } = new List<string>();
+    private void CheckNullState()
+    {
+        if (hurtBox == null)
+        {
+            try
+            {
+                hurtBox = GetComponentInChildren<HurtBox>();
+            }
+            catch
+            {
+                try
+                {
+                    hurtBox = GetComponent<HurtBox>();
+                }
+                catch
+                {
+                    gameObject.AddComponent<HurtBox>();
+                    hurtBox = GetComponent<HurtBox>();
+                }
+            }
+        }
+        if (body == null)
+        {
+            try
+            {
+                body = GetComponent<Rigidbody>();
+            }
+            catch
+            {
+                gameObject.AddComponent<Rigidbody>();
+                body = GetComponent<Rigidbody>();
+            }
+        }
+        if (movement == null)
+        {
+            try
+            {
+                movement = GetComponentInChildren<MovementEnemy>();
+            }
+            catch
+            {
+                gameObject.AddComponent<MovementEnemy>();
+                movement = GetComponent<MovementEnemy>();
+            }
+        }
+        if (summonStench == null)
+        {
+            try
+            {
+                summonStench = GetComponentInChildren<SummonStench>();
+            }
+            catch
+            {
+                try
+                {
+                    summonStench = GetComponent<SummonStench>();
+                }
+                catch
+                {
+                    gameObject.AddComponent<SummonStench>();
+                    summonStench = GetComponent<SummonStench>();
+                }
+            }
+        }
+        
+    }
     public void Init()
     {
         Player.FillNullInventory();
@@ -92,17 +158,46 @@ public class EntityTemplete : MonoBehaviour, IHasCharacter
     private void Start()
     {
         worldRun = WorldRun.Instance;
-        character = new Character(AllLibary.ItemLibary.SearchLibaryForCharacter(PresetCharacterName),new Player(Name, ExtraItemSlots + FindInventoryItemsInLibary.Length));
+        try
+        {
+            character = new Character(AllLibary.ItemLibary.SearchLibaryForCharacter(PresetCharacterName),new Player(Name, ExtraItemSlots + FindInventoryItemsInLibary.Length));
+        }
+        catch (NullReferenceException)
+        {
+
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+        }
         Init();
         Ready = true;
     }
     private void Awake()
     {
         worldRun = WorldRun.Instance;
-        character = new Character(AllLibary.ItemLibary.SearchLibaryForCharacter(PresetCharacterName));
+        try
+        {
+            character = new Character(AllLibary.ItemLibary.SearchLibaryForCharacter(PresetCharacterName), new Player(Name, ExtraItemSlots + FindInventoryItemsInLibary.Length));
+        }
+        catch (NullReferenceException)
+        {
+
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+        }
         Init();
         Ready = true;
     }
+    public void SetupEntity(Character character, AttackWho[] who)
+    {
+        this.character = character;
+        whoToAttack = who;
+        CheckNullState();
+    }
+    
     private void GetHurtBoxData()
     {
         List<QueueInfo> apply = hurtBox.GetQueue();
@@ -125,7 +220,7 @@ public class EntityTemplete : MonoBehaviour, IHasCharacter
                     body.AddForce(0, apply[i].Knockback.GetYKnockback(Player.Weight), 0);
                 }
             }
-            Debug.Log($"Health == {Player.Health.Max}");
+            Debug.Log($"Health: {Player.Health.Current}");
             hurtBox.ClearQueue();
         }
     }

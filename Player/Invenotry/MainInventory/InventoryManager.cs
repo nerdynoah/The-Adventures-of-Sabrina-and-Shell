@@ -567,7 +567,7 @@ public class InvManager : MonoBehaviour
     /// Refersh all of the UI icon slots
     /// </summary>
     /// <param name="player"></param>
-    public void RefreshHotbarOnly(Player player)
+    public void RefreshHotbarOnly(InventorySystem player)
     {
         for (int i = 0; i < HotbarSize; i++)
         {
@@ -599,7 +599,7 @@ public class InvManager : MonoBehaviour
     /// Refresh the entire inventory
     /// </summary>
     /// <param name="player"></param>
-    public void RefreshFullInventory(Player player)
+    public void RefreshFullInventory(InventorySystem player)
     {
         for (int i = 0; i < HotbarSize; i++)
         {
@@ -704,7 +704,32 @@ public class InvManager : MonoBehaviour
     #endregion
     #region Show Certain Items
     #endregion
-    
+    #region Swap Items
+    public void SwapItems(int id1, int id2, InventorySystem player)
+    {
+        RemoveSelectItem(id1);
+        RemoveSelectItem(id2);
+        RefreshFullInventory(player);
+        SetSelectedItem(player.GetHotbarSlot());
+    }
+    /// <summary>
+    /// Swap 2 items.
+    /// </summary>
+    /// <param name="swap">Swap via an array of a size of 2.</param>
+    /// <param name="player"></param>
+    public void SwapItems(int[] swap, InventorySystem player)
+    {
+        if (swap.Length < 2)
+        {
+            throw new ArgumentException("Swap array size was too small");
+        }
+        RemoveSelectItem(swap[0]);
+        RemoveSelectItem(swap[1]);
+        RefreshFullInventory(player);
+        SetSelectedItem(player.GetHotbarSlot());
+    }
+    #endregion
+
     #region Extra Menus
     /// <summary>
     /// Searches your entire inventory to determine which items require extra menus based apon <see cref="Abilities"/>

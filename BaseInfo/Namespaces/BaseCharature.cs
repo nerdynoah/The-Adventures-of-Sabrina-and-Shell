@@ -1,9 +1,9 @@
 using BaseCharacter.Effects;
 using BaseCharacter.Entity;
-using BaseCharacter.Structual;
 using BaseCharacter.Items;
 using BaseCharacter.Movement;
 using BaseCharacter.Stats;
+using BaseCharacter.Structual;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -99,13 +99,12 @@ namespace BaseCharacter
         /// <summary>
         /// Detects where each / and whitespace is. The word in the / will be identifiable as a "command".<br></br> Everything else after the first whitespace will be stored as a "param". You can have multiple / and whitespaces. <br></br> Several annotations exist, such as @#-*, anything after them is considered "text". <br></br> Example:
         /// <code>
-        /// /give item Shotgun shells /max
         /// /give item shotgun blast_shells Lingering_shells #1 #20 #10
-        /// /give effect flytation_tiny
+        /// /give effect flytation
         /// /give character Vampire
         /// /jump #333
         /// /jump -600
-        /// /clear /give item grenade /jump #300 
+        /// /clear /give item grenade Shotgun shells /m /jump #300 
         /// </code>
         /// </summary>
         public static Regex SlashCommands { get; private set; } = new Regex(@"(?<=^|\s)\/(?<command>\w+)(?:\s+(?<params>(?<param>[^\/@#$%&\*\-\+\=\s]+)(?:(?:\s+|,\s*)(?<param>[^\/@#$%&\-\*\+\=\s]+))*(?=\s|$))?)?(?:\s*)(?<annotations>(?<annotation>[@#$%&\*\-\+\=])(?<text>[\w]*)(?:\s*(?<annotation>[@#$%&\*\-\+\=]+)*(?<text>[\w]+))*)?\b", RegexOptions.Compiled);
@@ -161,6 +160,7 @@ namespace BaseCharacter
                     case "cr":
                     case "cre":
                     case "new":
+                    case "n":
                         regexSearchTypes.Add(RegexSearchType.New);
                         break;
                     case "jump":
@@ -218,6 +218,7 @@ namespace BaseCharacter
                     case "die":
                         regexSearchTypes.Add(RegexSearchType.Die);
                         break;
+                    case "lib":
                     case "libary":
                     case "libaryObject":
                         regexSearchTypes.Add(RegexSearchType.LibaryObjects);
@@ -233,6 +234,11 @@ namespace BaseCharacter
                     case "or":
                     case "o":
                         regexSearchTypes.Add(RegexSearchType.Order);
+                        break;
+                    case "swap":
+                    case "sw":
+                    case "s":
+                        regexSearchTypes.Add(RegexSearchType.Switch);
                         break;
                     default:
                         regexSearchTypes.Add(RegexSearchType.None);
@@ -510,10 +516,9 @@ namespace BaseCharacter
                     $"LibaryObject:\n" +
                     $"Item, Effects, Entity, Quest\n" +
                     $"Example:\n" +
-                    $"/give item Mod_Launcher Rockets 6\n" +
                     $"/give item Shotgun Shells #1 #12 @ml\n" +
                     $"/give item * /max\n" +
-                    $"/give item Jump_boost #5 $30 =1\n" +
+                    $"/give effect Jump_boost #5 $30 =1\n" +
                     $"/give character Vampire \n" +
                     $"/give quest test_quest @m\n" +
                     $"Desc:\n" +
@@ -521,7 +526,7 @@ namespace BaseCharacter
                     $"# = amount of a singular item\n" +
                     $"@ = who\n" +
                     $"* to give all items and effects" +
-                    $"$ = time" +
+                    $"\n$ = time\n" +
                     $"= = options for effects";
                 found = true;
             }
@@ -530,9 +535,9 @@ namespace BaseCharacter
                 helpBlock += $"Command Output:\n" +
                     $"/list LibaryObject\n" +
                     $"libaryObject:\n" +
-                    $"Item, Effects, Entity, Quest\n" +
+                    $"Item, Effects, Entity, Character, Quest\n" +
                     $"Example:\n" +
-                    $"/list items \n" +
+                    $"/list item\n" +
                     $"Desc:\n" +
                     $"Lists all Libary objects on the screen";
                 found = true;
@@ -554,6 +559,7 @@ namespace BaseCharacter
                 helpBlock += $"Holds stats and movement for different characters.\n" +
                     $"Mainly used as the core of a entity/Player, however, the indivudal AI/Algorithms that the entity/Player has have to be coded in individually\n" +
                     $"Does not contain a preset inventory";
+                found = true;
             }
             if (search == RegexSearchType.Entities)
             {
@@ -575,12 +581,26 @@ namespace BaseCharacter
             }
             if (search == RegexSearchType.Switch)
             {
-                
+                helpBlock += $"Swaps your prospective with the entity your looking at.\n" +
+                    $"Also lets you switch between first and third perspective\n" +
+                    $"Uses @ annotations.\n" +
+                    $"" +
+                    $"/swap third, /swap first, /swap third @l $";
+                found = true;
+            }
+            if (search == RegexSearchType.Order)
+            {
+                helpBlock += $"Orders items in your inventory, no Annotations are used.\n" +
+                    $"Following Options: Name, Type, Price, Size, Weight, Amount. \n" +
+                    $"Example: /order Name, /order Type, /order size, /order weight, /order amount";
+                found = true;
+
             }
             if (search == RegexSearchType.New)
             {
                 //TODO: Finsish
             }
+
             return helpBlock;
         }
         public static bool GetAll(string text)
@@ -599,7 +619,7 @@ namespace BaseCharacter
         /// <param name="inventorySize">The size of the Player's inventory (use to prevent errors)</param>
         /// <param name="attributes">Attributes collected(as a string)</param>
         /// <param name="items">Items collected (as a string)</param>
-        public static void GetChatBoxRegex(string text, int inventorySize, out List<AttributesTemplete> attributes, out List<AddItemRequest> items, out List<string> msgData, out ClearThings clear, out float jump, out bool getAllItems, out bool maxInventory, out RegexOrderItems orderBy, out string charact, out string error)
+        public static void GetChatBoxRegex(string text, int inventorySize, out List<AttributesTemplete> attributes, out List<AddItemRequest> items, out List<string> msgData, out ClearThings clear, out float jump, out bool getAllItems, out bool maxInventory, out RegexOrderItems orderBy, out string charact, out string error, out SwitchPerspective switchPerspective)
         {
             error = string.Empty;
             jump = 0;
@@ -611,6 +631,7 @@ namespace BaseCharacter
             clear = new ClearThings(false,false);
             charact = null;
             orderBy = RegexOrderItems.KeepAsIs;
+            switchPerspective = new SwitchPerspective(null);
             List<RegexSearchType> regexSearch = SlashRegex.GetSlashSearchType(text: text, matches: out MatchCollection commands);
             if (regexSearch.Count < 0)
             {
@@ -629,7 +650,7 @@ namespace BaseCharacter
                     }
                     if (!foundThing)
                     {
-                        msgData.Add("/default => Set default values, targets, etc...\n/give => give things to target\n/switch => Switch character ingame or inventory of another Player\n/help => Get help on specsific commands (hint: use /help /jump or /help /help)\n/jump => jump\n/new => Create new Attribute\n/list => List all libaryObjects\n/clear => Clear inventory and/or effects\n/max => Maxes out all your items in your inventory\n Use /Help /Command to find out further info.\n");
+                        msgData.Add("/default => Set default values, targets, etc...\n/give => give things to target\n/switch => Switch your body and/or your inventory with another entitiy, switch camera perspective (First, Third, Top/Down)\n/help => Get help on specsific commands (hint: use /help /jump or /help /help)\n/jump => jump\n/new => Create new Attribute\n/list => List all libaryObjects\n/clear => Clear inventory and/or effects\n/max => Maxes out all your items in your inventory\n/order => Use to order items in your inventory. (i.e /order type)\n Use /Help /Command to find out further info.\n");
                     }
                     break;
                 }
@@ -645,13 +666,17 @@ namespace BaseCharacter
                     {
                         msgData.AddRange(AllLibary.ItemLibary.GetInventoryItemNames());
                     }
+                    if (which == LibraryObjects.Character)
+                    {
+                        msgData.AddRange(AllLibary.ItemLibary.GetCharacterNames());
+                    }
                     if (which == LibraryObjects.Entities)
                     {
-                        msgData.AddRange(AllLibary.ItemLibary.GetInventoryItemNames());
+                        msgData.AddRange(AllLibary.ItemLibary.GetEntitityNames());
                     }
                     if (which == LibraryObjects.None)
                     {
-                        error += "That is not a type of libaryObject. Please use item, effect, character. (i.e /give item Grenade)";
+                        error += "That is not a type of libaryObject. Please use one of the following\nItem, Effect, Character, Entity";
                     }
                 }
                 #region Give Command
@@ -990,10 +1015,37 @@ namespace BaseCharacter
                         orderBy = GetRegexOrder(parameters[0]);
                     }
                 }
+                if (regexSearch[i] == RegexSearchType.Switch)
+                {
+                    List<string> parameters = GetSlashParamStrings(commands[i], 0, commands[i].Groups["param"].Captures.Count);
+                    Enums.CameraMode? cameraMode = null;
+                    CaptureCollection annotationCaptures = commands[i].Groups["annotation"].Captures;
+                    CaptureCollection textCaptures = commands[i].Groups["text"].Captures;
+                    if (parameters.Count > 0)
+                    {
+                        cameraMode = parameters[0] switch
+                        {
+                            "first" or "firs" or "fir" or "fi" or "f" or "1" => CameraMode.FirstPerson,
+                            "third" or "thir" or "thi" or "th" or "3" => CameraMode.ThirdPerson,
+                            "top" or "to" or "t" or "4" => CameraMode.TopDownPerspective,
+                            _ => null
+                        };
+                    }
+                    bool switchInvo = false;
+                    for (int j = 0; j < annotationCaptures.Count; j++)
+                    {
+                        if (annotationCaptures[j].Value.Contains("$") || annotationCaptures[j].Value.Contains("+") || annotationCaptures[j].Value.Contains("-") || annotationCaptures[j].Value.Contains("#"))
+                        {
+                            switchInvo = true;
+                        }
+                    }
+                    switchPerspective = new SwitchPerspective(cameraMode, true, switchInvo);
+                }
             }
         }
         public static RegexOrderItems GetRegexOrder(string parameter)
         {
+            parameter = parameter.ToLower();
             return parameter switch
             {
                 "name" or "nam" or "na" or "n" => RegexOrderItems.Name,
@@ -1166,7 +1218,7 @@ namespace BaseCharacter
                 this.intValue = intValue;
             }
         }
-        public record NameId : IName
+        public struct NameId : IName
         {
             public int Id;
             public string Name;
@@ -1366,11 +1418,26 @@ namespace BaseCharacter
                 return priority;
             }
         }
+        /// <summary>
+        /// Clear things from a character, or the character themself.
+        /// </summary>
         public struct ClearThings
         {
+            /// <summary>
+            /// Clear Inventory
+            /// </summary>
             public bool Inventory { get; private set; }
+            /// <summary>
+            /// Clear Effects
+            /// </summary>
             public bool Effect { get; private set; }
+            /// <summary>
+            /// Clear Character
+            /// </summary>
             public bool Character { get; private set; }
+            /// <summary>
+            /// Clear Quests
+            /// </summary>
             public bool Quests { get; private set; }
             /// <summary>
             /// Clear things from a character
@@ -1384,6 +1451,28 @@ namespace BaseCharacter
                 Effect = effect;
                 Character = character;
                 Quests = quests;
+            }
+        }
+        public struct SwitchPerspective
+        {
+            public Enums.CameraMode? CameraMode { get; private set; }
+            public List<RegexTarget> RegexModifier { get; private set; }
+            public bool SwitchItems { get; private set; }
+            public SwitchPerspective(CameraMode? modes, bool switchItems = false)
+            {
+                CameraMode = modes;
+                SwitchItems = switchItems;
+                RegexModifier = new List<RegexTarget>();
+            }
+            public SwitchPerspective(CameraMode? modes, bool switchCharacter, bool switchItems = false)
+            {
+                CameraMode = modes;
+                SwitchItems = switchItems;
+                RegexModifier = new List<RegexTarget>();
+                if (switchCharacter == true)
+                {
+                    RegexModifier.Add(RegexTarget.LookingAt);
+                }
             }
         }
     }
@@ -2831,7 +2920,13 @@ namespace BaseCharacter
         /// </summary>
         public class GRDPound
         {
+            /// <summary>
+            /// Remaining usages
+            /// </summary>
             public byte Usages { get; private set; }
+            /// <summary>
+            /// Base amount of usages.
+            /// </summary>
             public byte BaseUsages { get; private set; }
 
             public GRDPound(byte usages)
@@ -2844,10 +2939,18 @@ namespace BaseCharacter
                 Usages = other.Usages;
                 BaseUsages = other.BaseUsages;
             }
+            /// <summary>
+            /// Reset Usages.
+            /// </summary>
             public void Reset()
             {
                 Usages = BaseUsages;
             }
+            /// <summary>
+            /// Can you ground pound?<br></br><br></br>
+            /// Decreases Usages.
+            /// </summary>
+            /// <returns>True/False</returns>
             public bool CanPound()
             {
                 if (Usages > 0)
@@ -2927,6 +3030,13 @@ namespace BaseCharacter
                     }
                 }
             }
+            /// <summary>
+            /// Decrease Direction Power Z if no keys are being pressed.
+            /// <code>
+            /// <see cref="float"/> math = Mathf.Abs(<see cref="DirPowX"/>) * (<paramref name="power"/> * <see cref="defaultPowerZ"/>) * <see cref="Time.fixedDeltaTime"/>;
+            /// </code>
+            /// </summary>
+            /// <param name="power"></param>
             public void DirectionalChangeNoPressZ(float power)
             {
                 if (DirPowZ != 0)
@@ -2942,11 +3052,27 @@ namespace BaseCharacter
                     }
                 }
             }
+            /// <summary>
+            /// Increase/Decrease X axis Directional Power via:
+            /// <code>
+            /// <see cref="DirPowX"/> += (<paramref name="power"/> * <see cref="defaultPowerX"/>) * <see cref="Time.fixedDeltaTime"/>;<br></br>
+            /// <see cref="DirPowX"/> = <see cref="Mathf"/>.Clamp(<see cref="DirPowX"/>, -<see cref="MaxSpeed"/>,<see cref="MaxSpeed"/>);
+            /// </code>
+            /// </summary>
+            /// <param name="power"></param>
             public void DirectionChangePressX(float power)
             {
                 DirPowX += (power * defaultPowerX) * Time.fixedDeltaTime;
                 DirPowX = Mathf.Clamp(DirPowX, -MaxSpeed, MaxSpeed);
             }
+            /// <summary>
+            /// Increase/Decrease Z axis Directional Power via:
+            /// <code>
+            /// <see cref="DirPowZ"/> += (<paramref name="power"/> * <see cref="defaultPowerZ"/>) * <see cref="Time.fixedDeltaTime"/>;<br></br>
+            /// <see cref="DirPowZ"/> = <see cref="Mathf"/>.Clamp(<see cref="DirPowZ"/>, -<see cref="MaxSpeed"/>,<see cref="MaxSpeed"/>);
+            /// </code>
+            /// </summary>
+            /// <param name="power"></param>
             public void DirectionChangePressZ(float power)
             {
                 DirPowZ += (power * defaultPowerZ) * Time.fixedDeltaTime;
@@ -3638,7 +3764,7 @@ namespace BaseCharacter
             Texture GetTextureItem(int id);
             void OrderItemsByName();
             void ScrollItem(int amount);
-            void SelectItem(int index);
+            void SetPendingItem(int index);
             void SetHotbarSlot(int slot);
             void SetupHotbar(int amount, int defaultHotbarSlot);
             void SwapItem(int index1, int index2);
@@ -4095,6 +4221,10 @@ namespace BaseCharacter
                 Name = name;
                 itemType = type;
             }
+            /// <summary>
+            /// A item with a name, desc, and type
+            /// </summary>
+            /// <param name="name"></param>
             public Item(string name, string desc, ItemType type)
             {
                 Name = name;
@@ -4167,7 +4297,7 @@ namespace BaseCharacter
                 //Ensure nothing is here
             }
             /// <summary>
-            /// Use to setup ammo
+            /// Use to setup ammo.<br></br>Sets <see cref="itemType"/> to <see cref="ItemType.Ammo"/>
             /// </summary>
             /// <param name="name"></param>
             /// <param name="desc"></param>
@@ -5605,7 +5735,7 @@ namespace BaseCharacter
             /// <summary>
             /// Is the item a "empty" item to be replaced/disposed of when a new item enters the inventory.
             /// </summary>
-            protected bool EmptyItem { get; set; }
+            public bool EmptyItem { get; protected set; }
             public bool MarkedForDeletion { get; protected set; } = false;
             /// <summary>
             /// The weight of this item if the amount = 0;
@@ -6568,7 +6698,7 @@ namespace BaseCharacter
             }
             public void OrderItemsByItemType(ItemType itemType)
             {
-                Inventory = Inventory.OrderByDescending(item => item.GetItemType() == itemType).ThenBy(item => item.GetItemType()).ThenBy(item => item.GetName()).ThenBy(item => item.Price).ToList();
+                Inventory = Inventory.OrderByDescending(item => item.GetItemType() == itemType).ThenByDescending(item => item.GetItemType() == ItemType.Item).ThenByDescending(item => item.GetItemType() != ItemType.Empty).ThenByDescending(item => item.Price).ThenByDescending(item => item.GetName()).ToList();
             }
             public void OrderItemsByPrice()
             {
@@ -6651,10 +6781,10 @@ namespace BaseCharacter
                 }
             }
             /// <summary>
-            /// Set a item as Selected. Or <see cref="PendingItem"/>
+            /// Set an item as Pending. Or <see cref="PendingItem"/>
             /// </summary>
             /// <param name="index">Which item</param>
-            public void SelectItem(int index)
+            public void SetPendingItem(int index)
             {
                 PendingItem = (index >= 0 && index < Inventory.Count) ? index : -1;
             }
@@ -7171,6 +7301,41 @@ namespace BaseCharacter
             public static Color idleSelected = new Color(0.9137254902f, 0.2392156863f, 0.6431372549f);
             public static Color hoverSelected = new Color(0.7647058824f, 0.1411764706f, 0.7529411765f);
         }
+        public static class SwapInventories
+        {
+            public static void SwapInventorySystems(InventorySystem og, InventorySystem swap)
+            {
+                if (og.GetInventorySize() <= swap.GetInventorySize())
+                {
+                    for (int i = 0; i < og.GetInventorySize(); i++)
+                    {
+                        try
+                        {
+                            (og.GetInventory()[i], swap.GetInventory()[i]) = (swap.GetInventory()[i], og.GetInventory()[i]);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogError($"Swap failed: {ex.Message}");
+                        }
+                    }
+                }
+                if (og.GetInventorySize() > swap.GetInventorySize())
+                {
+                    og.OrderItemsByItemType(ItemType.Weapon);
+                    for (int i = 0; i < swap.GetInventorySize(); i++)
+                    {
+                        try
+                        {
+                            (og.GetInventory()[i], swap.GetInventory()[i]) = (swap.GetInventory()[i], og.GetInventory()[i]);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogError($"Swap failed: {ex.Message}");
+                        }
+                    }
+                }
+            }
+        }
     }
     namespace Stats
     {
@@ -7214,12 +7379,23 @@ namespace BaseCharacter
             }
             private int level;
             private readonly float increasePerLevel;
+            /// <summary>
+            /// Level 1 Stat
+            /// </summary>
             public float Level1Stat { get; private set; }
-
+            /// <summary>
+            /// Empty Consturctor.
+            /// </summary>
             public Stat()
             {
 
             }
+            /// <summary>
+            /// Create a stat set to level 0.
+            /// </summary>
+            /// <param name="name">Name of the Stat</param>
+            /// <param name="level1Stat">Stat at level 1</param>
+            /// <param name="increasePerLevel">Increase stat per level.</param>
             public Stat(string name, float level1Stat, float increasePerLevel)
             {
                 this.increasePerLevel = increasePerLevel;
@@ -7228,6 +7404,13 @@ namespace BaseCharacter
                 Level = 0;
                 desc = $"{name}: Value: {Max}, Level: {Level}";
             }
+            /// <summary>
+            /// Create a stat set to level <paramref name="currentLevel"/>
+            /// </summary>
+            /// <param name="name">Name of the Stat</param>
+            /// <param name="level1Stat">Stat at level 1</param>
+            /// <param name="increasePerLevel">Increase stat per level.</param>
+            /// <param name="currentLevel">Set the current level.</param>
             public Stat(string name, float level1Stat, float increasePerLevel, int currentLevel)
             {
                 this.increasePerLevel = increasePerLevel;
@@ -7236,6 +7419,10 @@ namespace BaseCharacter
                 Level = currentLevel;
                 desc = $"{name}: Value: {Max}, Level: {Level}";
             }
+            /// <summary>
+            /// True Copy Constructor
+            /// </summary>
+            /// <param name="other"></param>
             public Stat(Stat other)
             {
                 this.level = other.level;
@@ -7245,6 +7432,12 @@ namespace BaseCharacter
                 this.desc = other.desc;
                 this.Max = other.Max;
             }
+            /// <summary>
+            /// Copy constructor, execpt for the level 1 stat and increase per level.
+            /// </summary>
+            /// <param name="other"></param>
+            /// <param name="level1Stat">new level 1 stat</param>
+            /// <param name="increasePerLevel">new increase per level.</param>
             public Stat(Stat other, float level1Stat, float increasePerLevel)
             {
                 this.level = other.level;
@@ -7255,6 +7448,13 @@ namespace BaseCharacter
                 this.Level = other.level;
                 desc = $"{name}: Value: {Max}, Level: {Level}";
             }
+            /// <summary>
+            /// Copy constructor, execpt for the level 1 stat, increase per level, and its new current level.
+            /// </summary>
+            /// <param name="other"></param>
+            /// <param name="level1Stat">new level 1 stat</param>
+            /// <param name="increasePerLevel">new increase per level.</param>
+            /// <param name="newLevel">new curretn level.</param>
             public Stat(Stat other, float level1Stat, float increasePerLevel, int newLevel)
             {
                 this.level = newLevel;
@@ -7265,6 +7465,11 @@ namespace BaseCharacter
                 this.Level = newLevel;
                 desc = $"{name}: Value: {Max}, Level: {Level}";
             }
+            /// <summary>
+            /// Copy constructor, but you set the level.
+            /// </summary>
+            /// <param name="other"></param>
+            /// <param name="level">set level</param>
             public Stat(Stat other, int level)
             {
                 this.level = level;
@@ -7610,6 +7815,11 @@ namespace BaseCharacter
             /// Has the effect started?
             /// </summary>
             private bool hasStarted;
+            /// <summary>
+            /// Set adjustment value and time.
+            /// </summary>
+            /// <param name="strength"></param>
+            /// <param name="time"></param>
             public void SetAdjustment(float strength, float time)
             {
                 this.strength += strength;
@@ -7774,7 +7984,7 @@ namespace BaseCharacter
         /// </list>
         /// The <see cref="Player"/> class is used on many objects that do not have a <see cref="Character"/>. A <see cref="Character"/> has a <see cref="Player"/> class in it, but you can use <see cref="Player"/> on its own.
         /// </summary>
-        public class Player : GroupOfStats, IWallet, INameDescSet, IApplyEffects
+        public class Player : GroupOfStats, IWallet, INameDescSet, IApplyEffects, IAim, IFireDamage, IRegeneration, IFlytation, ICry
         {
             public uint ID { get; private set; }
             /// <summary>
@@ -8572,7 +8782,7 @@ namespace BaseCharacter
         /// <summary>
         /// Used to seperate some values from the <see cref="Player"/> class. GroupOfStats should not be used otherwise.
         /// </summary>
-        public abstract class GroupOfStats : InventorySystem
+        public abstract class GroupOfStats : InventorySystem, IResistance, ISpeed, IGroundPound, IJump, IWeight, IVision, IReach, IHear, IStink
         {
             protected GroupOfStats()
             {
@@ -8763,6 +8973,93 @@ namespace BaseCharacter
                 return GroundPound;
             }
             #endregion
+        }
+        public interface IRegeneration
+        {
+            public void ClearRegeneration();
+            public bool GetIsRegeenrating();
+            public void ApplyRegeneration();
+        }
+        public interface IGravity
+        {
+            public float Gravity { get; }
+            public float GravityBase { get; }
+            public float GravityProtectionTime { get; }
+        }
+        public interface IFlytation : IGravity
+        {
+            public void ApplyFlytation();
+            public void ClearFlytation();
+        }
+        public interface IFireDamage
+        {
+            public void ApplyFireDamage();
+            public void ClearFireDamage();
+        }
+        public interface ICry
+        {
+            public void ApplyCrying();
+            public void ClearCrying();
+        }
+        public interface ISpeed
+        {
+            public float Speed { get; }
+            public Stat SpeedBase { get; }
+            /// <summary>
+            /// Get speed base.
+            /// </summary>
+            /// <returns>SpeedBase.Max</returns>
+            public float GetSpeedBase()
+            {
+                return SpeedBase.Max;
+            }
+        }
+        public interface IGroundPound
+        {
+            public Stat GroundPoundBase { get; }
+            public float GroundPound { get; }
+            public float GetGroundPound(bool baseValue);
+        }
+        public interface IJump
+        {
+            public Stat JumpBase { get; }
+            public float Jump { get; }
+        }
+        public interface IWeight
+        {
+            public float WeightBase { get; }
+        }
+        public interface IAim
+        {
+            public float Aiming { get; }
+            public Stat Aim { get; }
+        }
+        public interface IVision
+        {
+            public Stat VisionBase { get; }
+            public float Vision { get; }
+        }
+        public interface IReach
+        {
+            public void SetReachRange(float range);
+            public float GetReach();
+        }
+        public interface IResistance
+        {
+            public void SetResistance(WeaponClass wpnclass, float value);
+            public void SetupResistances(params (WeaponClass, float)[] resistances);
+            public float[] GetResistances();
+        }
+        public interface IHear
+        {
+            public Stat HearingBase { get; }
+            public float Hear { get; }
+        }
+        public interface IStink
+        {
+            public float Stench { get; }
+            public Stat StinkBase { get; }
+
         }
     }
     namespace WindowController
@@ -9682,7 +9979,7 @@ namespace BaseCharacter
         /// Set a item as Selected. Or <see cref="PendingItem"/>
         /// </summary>
         /// <param name="index">Which item</param>
-        public void SelectItem(int index)
+        public void SetPendingItem(int index)
         {
             PendingItem = (index >= 0 && index < Quests.Count) ? index : -1;
         }
@@ -9865,7 +10162,7 @@ namespace BaseCharacter
     /// <item>Scene methods: <see cref="GetCurrentSceneName()"/> and <see cref="ReloadCurrentScene()"/></item>
     /// <item>Array methods: <see cref="ArrayRandomReadjustment{T}(T[])"/>, <see cref="ArrayRandomReadjustment{T}(List{T})"/>, <see cref="CompareArray{T}(T[], T)"/> and <see cref="ResizeArray{T}(T[], int)"/></item>
     /// <item>Mesc methods: <see cref="GetAllGameObjects(GameObject)"/> and <see cref="RandomValuePositive(int)"/></item>
-    /// <item>Readonly: <see cref="charsToTrim"/></item>
+    /// <item>Readonly values: <see cref="charsToTrim"/>, <see cref="ScreenHightFactor"/>, <see cref="ScreenWidthFactor"/></item>
     /// </list>
     /// </summary>
     public static class Methods
@@ -9892,7 +10189,7 @@ namespace BaseCharacter
             SceneManager.LoadScene(currentSceneIndex);
         }
         /// <summary>
-        /// Get a random vlaue
+        /// Get a random value between -0.5f and 0.5f multiplied by <paramref name="adj"/> 
         /// </summary>
         /// <param name="adj"></param>
         /// <returns></returns>
@@ -10053,14 +10350,24 @@ namespace BaseCharacter
     /// <list type="number">
     /// <item>A <see cref="BaseCharacter.Entity.Player"/></item>
     /// <item>Movement systems from the <see cref="BaseCharacter.Movement"/> namespace and a JUMPDELAY value</item>
-    /// <item>A name to reference from the <see cref="AllLibary.ItemLibary"/></item>
+    /// <item>A CharacterName to reference the Character from the <see cref="AllLibary.ItemLibary"/></item>
     /// <item>Names of friends and enemies</item>
     /// </list>
     /// </summary>
     public class Character : INameDescSet
     {
+        /// <summary>
+        /// Name of the character. Used to find the character in the Libary via <see cref="AllLibary.SearchLibaryForCharacter(string)"/> <br></br>
+        /// To see the name of the individual, use <see cref="Player.Name"/>
+        /// </summary>
         public string CharacterName { get; private set; }
+        /// <summary>
+        /// Icon of the character.
+        /// </summary>
         public Texture Icon { get; private set; }
+        /// <summary>
+        /// WASD movement
+        /// </summary>
         public MovingSystemKeyboard MoveSys { get; private set; }
         public GRDPound Gpound { get; private set; }
         public JumpSystem JumpSys { get; private set; }
@@ -10111,6 +10418,7 @@ namespace BaseCharacter
             Friends = other.Friends;
             Enemies = other.Enemies;
             Icon = other.Icon;
+            ColorOfStench = other.ColorOfStench;
 
             try
             {
@@ -10132,6 +10440,7 @@ namespace BaseCharacter
             Icon = other.Icon;
             Friends = other.Friends;
             Enemies = other.Enemies;
+            ColorOfStench = other.ColorOfStench;
             try
             {
                 Player = new Player(other.Player);
@@ -10201,7 +10510,7 @@ namespace BaseCharacter
             return ((INameDesc)Player).GetName();
         }
         /// <summary>
-        /// Lowers aim by 100.
+        /// Lowers aim by 100 and multiplies health by <paramref name="healthAdjustMent"/>
         /// </summary>
         public void SetEnemy(float healthAdjustMent, float aimDec = 100)
         {

@@ -5,6 +5,7 @@ public class PlayerShadow : MonoBehaviour
     private Vector3 direction = Vector3.down;
     [SerializeField] private SpawnShadow spawnShadow;
     [SerializeField][Range(0f,0.25f)] private float ShadowStaysFor = 0.12f;
+    [SerializeField] private float size = 1f;
 
     // Update is called once per frame
     void Update()
@@ -24,7 +25,7 @@ public class PlayerShadow : MonoBehaviour
                 {
                     closestDist = temp;
                     SpawnShadow shadow = Instantiate(spawnShadow, hit.point, Quaternion.identity);
-                    shadow.Setup(temp, 0.12f);
+                    shadow.Setup(temp, 0.12f, size);
                 }
             }
 
